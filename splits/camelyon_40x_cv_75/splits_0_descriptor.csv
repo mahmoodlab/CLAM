@@ -1,0 +1,3 @@
+,train,val,test
+normal_tissue,420,68,41
+tumor_tissue,212,30,29
