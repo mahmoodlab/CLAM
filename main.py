@@ -100,7 +100,7 @@ parser.add_argument('--bag_loss', type=str, choices=['svm', 'ce'], default='ce',
 parser.add_argument('--model_type', type=str, choices=['clam', 'mil'], default='clam', help='type of model (default: clam)')
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
-parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model')
+parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
 parser.add_argument('--task', type=str, choices=['camelyon_40x_cv',  'tcga_kidney_cv'])
 args = parser.parse_args()
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
