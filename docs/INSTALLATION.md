@@ -1,4 +1,4 @@
-CLAM Installation Guide <img src="logo.jpg" width="350px" align="right" />
+CLAM Installation Guide <img src="clam-logo.png" width="350px" align="right" />
 ===========
 For instructions on installing anaconda on your machine (download the distribution that comes with python 3):
 https://www.anaconda.com/distribution/
