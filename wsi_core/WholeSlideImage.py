@@ -100,7 +100,7 @@ def SamplePatches(hdf5_file_path, save_dir, downscale=1, n=20, sn=None):
         img_patch.save(name)
 
 class WholeSlideImage(object):
-    def __init__(self, path, xml_path=None, hdf5_file=None):
+    def __init__(self, path, hdf5_file=None):
         self.name = ".".join(path.split("/")[-1].split('.')[:-1])
         self.wsi = openslide.open_slide(path)
         self.level_downsamples = self._assertLevelDownsamples()
