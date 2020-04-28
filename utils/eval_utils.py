@@ -27,7 +27,7 @@ def initiate_model(args, ckpt_path):
     print('Init Model')    
     model_dict = {"dropout": args.drop_out, 'n_classes': args.n_classes}
     
-    if args.model_size is not None:
+    if args.model_size is not None and args.model_type != 'mil':
         model_dict.update({"size_arg": args.model_size})
     
     if args.model_type =='clam':
