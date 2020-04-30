@@ -257,7 +257,8 @@ if __name__ == '__main__':
 
 	for key, val in directories.items():
 		print("{} : {}".format(key, val))
-		os.makedirs(val, exist_ok=True)
+		if key not in ['source']:
+			os.makedirs(val, exist_ok=True)
 
 	seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False}
 	filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8}
