@@ -8,7 +8,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import openslide
-from PIL import Image, ImageEnhance, ImageDraw
+from PIL import Image
 import pdb
 import h5py
 import math
