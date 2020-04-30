@@ -74,31 +74,6 @@ def StitchPatches(hdf5_file_path, downscale=16, draw_grid=False, bg_color=(0,0,0
     file.close()
     return heatmap
 
-def SamplePatches(hdf5_file_path, save_dir, downscale=1, n=20, sn=None):
-    file = h5py.File(hdf5_file_path, 'r')
-    dset = file['imgs']
-    coords = file['coords'][:]
-    print('number of patches: {}'.format(len(dset)))
-    img_shape = dset[0].shape
-    print('patch shape: {}'.format(img_shape))
-    
-    if downscale > 1:
-        w = w // downscale
-        h = h //downscale
-        coords = (coords / downscale).astype(np.int32)
-        print('downscaled size for display: {} x {}'.format(w, h))
-        img_shape = (img_shape[1] // downscale, img_shape[0] // downscale)
-
-    sample_ids = np.random.choice(np.arange(len(dset)), n, replace=False)
-    for idx in sample_ids:
-        img_patch = dset[idx]
-        if sn is not None:
-            img_patch = sn.transform(img_patch)
-        img_patch = Image.fromarray(img_patch)
-        coord = coords[idx]
-        name = os.path.join(save_dir, 'patch_{}_{}_{}.png'.format(idx, coord[0], coord[1]))
-        img_patch.save(name)
-
 class WholeSlideImage(object):
     def __init__(self, path, hdf5_file=None):
         self.name = ".".join(path.split("/")[-1].split('.')[:-1])
