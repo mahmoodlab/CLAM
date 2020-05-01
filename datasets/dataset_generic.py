@@ -90,8 +90,6 @@ class Generic_WSI_Classification_Dataset(Dataset):
 			patient_labels.append(label)
 		
 		self.patient_data = {'case_id':patients, 'label':np.array(patient_labels)}
-
-		self.patient_data_prep()
 		self.cls_ids_prep()
 
 		if print_info:
@@ -105,18 +103,6 @@ class Generic_WSI_Classification_Dataset(Dataset):
 		self.slide_cls_ids = [[] for i in range(self.num_classes)]
 		for i in range(self.num_classes):
 			self.slide_cls_ids[i] = np.where(self.slide_data['label'] == i)[0]
-
-	def patient_data_prep(self):
-		patients = np.unique(np.array(self.slide_data['case_id'])) # get unique patients
-		patient_labels = []
-		
-		for p in patients:
-			locations = self.slide_data[self.slide_data['case_id'] == p].index.tolist()
-			assert len(locations) > 0
-			label = self.slide_data['label'][locations[0]] # get patient label
-			patient_labels.append(label)
-		
-		self.patient_data = {'case_id':patients, 'label':np.array(patient_labels)}
 
 	@staticmethod
 	def df_prep(data, label_dict, ignore, label_col):
