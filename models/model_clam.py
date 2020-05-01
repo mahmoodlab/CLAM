@@ -5,11 +5,6 @@ from utils.utils import initialize_weights
 import numpy as np
 
 """
-A Modified Implementation of Deep Attention MIL
-"""
-
-
-"""
 Attention Network without Gating (2 fc layers)
 args:
     L: input feature dimension
@@ -68,6 +63,17 @@ class Attn_Net_Gated(nn.Module):
         A = self.attention_c(A)  # N x n_classes
         return A, x
 
+"""
+args:
+    gate: whether to use gated attention network
+    size_arg: config for network size
+    dropout: whether to use dropout
+    k_sample: number of positive/neg patches to sample for instance-level training
+    dropout: whether to use dropout (p = 0.25)
+    n_classes: number of classes 
+    instance_loss_fn: loss function to supervise instance-level training
+    subtyping: whether it's a subtyping problem
+"""
 class CLAM(nn.Module):
     def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
         instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
