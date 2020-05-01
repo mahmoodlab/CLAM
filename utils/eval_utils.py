@@ -9,19 +9,9 @@ import pdb
 import os
 import pandas as pd
 from utils.utils import *
-from utils.core_utils import EarlyStopping,  Accuracy_Logger
-from utils.file_utils import save_pkl, load_pkl
-from PIL import Image
-from math import floor
+from utils.core_utils import Accuracy_Logger
 from sklearn.metrics import roc_auc_score, roc_curve, auc
-from PIL import ImageFilter
 import matplotlib.pyplot as plt
-from datasets.dataset_generic import Generic_WSI_Classification_Dataset, Generic_MIL_Dataset, save_splits
-import h5py
-from models.resnet_custom import resnet50_baseline
-from wsi_core.WholeSlideImage import WholeSlideImage
-from scipy.stats import percentileofscore
-import math
 
 def initiate_model(args, ckpt_path):
     print('Init Model')    
