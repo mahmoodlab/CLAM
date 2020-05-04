@@ -36,14 +36,12 @@ def save_hdf5(output_dir, asset_dict, mode='a'):
 	return output_dir
 
 
-def compute_w_loader(file_path, output_path, model,
-	feature_dim = 1024, batch_size = 8, verbose = 0, print_every=20, pretrained=True):
+def compute_w_loader(file_path, output_path, model, batch_size = 8, verbose = 0, print_every=20, pretrained=True):
 	"""
 	args:
 		file_path: directory of bag (.h5 file)
 		output_path: directory to save computed features (.h5 file)
 		model: pytorch model
-		feature_dim: feature dimension
 		batch_size: batch_size for computing features in batches
 		verbose: level of feedback
 		pretrained: use weights pretrained on imagenet
@@ -123,7 +121,7 @@ if __name__ == '__main__':
 			file_path = bag_candidate
 			time_start = time.time()
 			output_file_path = compute_w_loader(file_path, output_path, 
-			model = model, feature_dim = 1024, batch_size = args.batch_size, verbose = 1, print_every = 20)
+			model = model, batch_size = args.batch_size, verbose = 1, print_every = 20)
 			time_elapsed = time.time() - time_start
 			print('\ncomputing features for {} took {} s'.format(output_file_path, time_elapsed))
 			file = h5py.File(output_file_path, "r")
