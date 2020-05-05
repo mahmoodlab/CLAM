@@ -16,7 +16,6 @@ parser.add_argument('--task', type=str, choices=['camelyon_40x_cv', 'tcga_kidney
 args = parser.parse_args()
 
 if args.task == 'tcga_kidney':
-    args.n_classes=3
     dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/tcga_kidney_clean.csv',
                             shuffle = False, 
                             seed = args.seed, 
@@ -27,13 +26,11 @@ if args.task == 'tcga_kidney':
                             patient_voting='maj',
                             ignore=['TCGA-SARC'])
 
-    pdb.set_trace()
     val_num = (10, 48, 26)
     test_num = (10, 48, 26)
 
 
 elif args.task == 'camelyon_40x_cv':
-    args.n_classes=2
     dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/camelyon_clean.csv',
                             shuffle = False, 
                             seed = args.seed, 
@@ -42,7 +39,6 @@ elif args.task == 'camelyon_40x_cv':
                             patient_strat= True,
                             ignore=[])
 
-    pdb.set_trace()
     val_num = (31, 19)
     test_num = (31, 19)
 
