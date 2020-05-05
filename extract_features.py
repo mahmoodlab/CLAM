@@ -74,9 +74,9 @@ def compute_w_loader(file_path, output_path, model, batch_size = 8, verbose = 0,
 
 
 parser = argparse.ArgumentParser(description='Feature Extraction')
-parser.add_argument('--data_dir', type=str, default=None)
-parser.add_argument('--csv_path', type=str, default=None)
-parser.add_argument('--feat_dir', type=str, default=None)
+parser.add_argument('--data_dir', type=str)
+parser.add_argument('--csv_path', type=str)
+parser.add_argument('--feat_dir', type=str)
 parser.add_argument('--batch_size', type=int, default=256)
 parser.add_argument('--no_auto_skip', default=False, action='store_true')
 args = parser.parse_args()
@@ -86,9 +86,6 @@ if __name__ == '__main__':
 
 	print('initializing dataset')
 	csv_path = args.csv_path
-	if csv_path is None:
-		raise NotImplementedError
-
 	bags_dataset = Dataset_All_Bags(args.data_dir, csv_path)
 	
 	os.makedirs(args.feat_dir, exist_ok=True)
