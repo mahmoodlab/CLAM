@@ -127,7 +127,7 @@ python create_patches.py --source DATA_DIRECTORY --save_dir RESULTS_DIRECTORY --
 <img src="CLAM2.jpg" width="1000px" align="center" />
 
 ### Feature Extraction (GPU Example)
-A low-dimensional feature representation for each patch may be extracted using a pretrained feature encoder on imagenet or feature encoders trained using self-supervision. Currently feature extraction using a pretrained, modified ResNet50 is implemented.
+A low-dimensional feature representation for each patch may be extracted using a pretrained feature encoder on imagenet or feature encoders trained using self-supervision. Currently feature extraction using a pretrained, modified ResNet50 is implemented..
 
 ```shell
 CUDA_VISIBLE_DEVICES=0,1 python extract_features.py --data_dir DIR_TO_PATCHES --csv_path CSV_FILE_NAME --feat_dir FEATURES_DIRECTORY --batch_size 512
