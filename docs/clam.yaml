@@ -211,7 +211,6 @@ dependencies:
     - pytest==4.6.2
     - pytest-cov==2.7.1
     - python-utils==2.3.0
-    - pytiff==0.8.1
     - pywavelets==1.1.1
     - pyyaml==3.13
     - requests==2.22.0
