@@ -12,6 +12,8 @@ Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Imag
 
 ***How does CLAM work?** Clustering-constrained Attention Multiple Instance Learning (CLAM) is a deep-learning-based weakly-supervised method that uses attention-based learning to automatically identify sub-regions of high diagnostic value in order to accurately classify the whole slide, while also utilizing instance-level clustering over the representative regions identified to constrain and refine the feature space.*
 
+© [Mahmood Lab](http://www.mahmoodlab.org) - This code is made available under the GPLv3 License and is available for non-commercial academic purposes. 
+
 ## Pre-requisites:
 * Linux (Tested on Ubuntu 18.04)
 * NVIDIA GPU (Tested on Nvidia GeForce RTX 2080 Ti x 12 on local workstations, and Nvidia P100, K80 GPUs on Google Cloud)
@@ -125,7 +127,7 @@ python create_patches.py --source DATA_DIRECTORY --save_dir RESULTS_DIRECTORY --
 <img src="CLAM2.jpg" width="1000px" align="center" />
 
 ### Feature Extraction (GPU Example)
-A low-dimensional feature representation for each patch may be extracted using a pretrained feature encoder on imagenet or feature encoders trained using self-supervision. Currently feature extraction using a pretrained, modified ResNet50 is implemented.
+A low-dimensional feature representation for each patch may be extracted using a pretrained feature encoder on imagenet or feature encoders trained using self-supervision. Currently feature extraction using a pretrained, modified ResNet50 is implemented..
 
 ```shell
 CUDA_VISIBLE_DEVICES=0,1 python extract_features.py --data_dir DIR_TO_PATCHES --csv_path CSV_FILE_NAME --feat_dir FEATURES_DIRECTORY --batch_size 512
