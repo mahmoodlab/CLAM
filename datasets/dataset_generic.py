@@ -51,7 +51,6 @@ class Generic_WSI_Classification_Dataset(Dataset):
 			ignore (list): List containing class labels to ignore
 		"""
 		self.label_dict = label_dict
-		self.custom_test_ids = None
 		self.num_classes=len(self.label_dict)
 		self.seed = seed
 		self.print_info = print_info
@@ -139,7 +138,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 					'test_num': test_num,
 					'label_frac': label_frac,
 					'seed': self.seed,
-					'custom_test_ids': self.custom_test_ids
+					'custom_test_ids': custom_test_ids
 					}
 
 		if self.patient_strat:
