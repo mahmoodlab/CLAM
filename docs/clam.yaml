@@ -119,7 +119,7 @@ dependencies:
   - readline=8.0=h7b6447c_0
   - scipy=1.4.1=py37h0b6359f_0
   - send2trash=1.5.0=py37_0
-  - setuptools=46.1.1=py37_0
+  - setuptools=45.3.0=py37_0
   - sip=4.19.8=py37hf484d3e_0
   - six=1.14.0=py37_0
   - sqlite=3.31.1=h7b6447c_0
