@@ -32,8 +32,16 @@ def initiate_model(args, ckpt_path):
     model.relocate()
     print_network(model)
 
+    # ckpt = torch.load(ckpt_path)
+    # model.load_state_dict(ckpt, strict=False)
+
     ckpt = torch.load(ckpt_path)
-    model.load_state_dict(ckpt, strict=False)
+    ckpt_clean = {}
+    for key in ckpt.keys():
+        if 'instance_loss_fn' in key:
+            continue
+        ckpt_clean.update({key.replace('.module', ''):ckpt[key]})
+    model.load_state_dict(ckpt_clean, strict=True)
 
     model.eval()
     return model
