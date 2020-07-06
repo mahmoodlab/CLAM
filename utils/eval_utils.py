@@ -29,7 +29,6 @@ def initiate_model(args, ckpt_path):
         else:
             model = MIL_fc(**model_dict)
 
-    model.relocate()
     print_network(model)
 
     # ckpt = torch.load(ckpt_path)
@@ -43,6 +42,7 @@ def initiate_model(args, ckpt_path):
         ckpt_clean.update({key.replace('.module', ''):ckpt[key]})
     model.load_state_dict(ckpt_clean, strict=True)
 
+    model.relocate()
     model.eval()
     return model
 
