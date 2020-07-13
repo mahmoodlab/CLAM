@@ -230,12 +230,6 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         inst_count+=1
         instance_loss_value = instance_loss.item()
         train_inst_loss += instance_loss_value
-
-        instance_loss = instance_dict['instance_loss']
-        inst_count+=1
-        instance_loss_value = instance_loss.item()
-        train_inst_loss += instance_loss_value
-
         
         total_loss = bag_weight * loss + (1-bag_weight) * instance_loss 
 
