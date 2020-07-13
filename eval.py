@@ -30,8 +30,8 @@ parser.add_argument('--splits_dir', type=str, default=None,
                     help='splits directory, if using custom splits other than what matches the task (default: None)')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', 
                     help='size of model (default: small)')
-parser.add_argument('--model_type', type=str, choices=['clam', 'mil'], default='clam', 
-                    help='type of model (default: clam)')
+parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
+                    help='type of model (default: clam_sb)')
 parser.add_argument('--drop_out', action='store_true', default=False, 
                     help='whether model uses dropout')
 parser.add_argument('--k', type=int, default=10, help='number of folds (default: 10)')
@@ -41,7 +41,7 @@ parser.add_argument('--fold', type=int, default=-1, help='single fold to evaluat
 parser.add_argument('--micro_average', action='store_true', default=False, 
                     help='use micro_average instead of macro_avearge for multiclass AUC')
 parser.add_argument('--split', type=str, choices=['train', 'val', 'test', 'all'], default='test')
-parser.add_argument('--task', type=str, choices=['camelyon_40x_cv', 'tcga_kidney_cv', 'bwh_lung_biopsy'])
+parser.add_argument('--task', type=str, choices=['camelyon_40x_cv', 'tcga_kidney_cv'])
 args = parser.parse_args()
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -52,7 +52,6 @@ args.save_dir = os.path.join('./eval_results', 'EVAL_' + str(args.save_exp_code)
 args.models_dir = os.path.join(args.results_dir, str(args.models_exp_code))
 
 os.makedirs(args.save_dir, exist_ok=True)
-os.makedirs(os.path.join(args.save_dir, 'attention_scores'), exist_ok=True)
 
 if args.splits_dir is None:
     args.splits_dir = args.models_dir

@@ -3,9 +3,11 @@ import torch
 from utils.utils import *
 import os
 from datasets.dataset_generic import save_splits
-from sklearn.metrics import roc_auc_score
 from models.model_mil import MIL_fc, MIL_fc_mc
-from models.model_clam import CLAM
+from models.model_clam import CLAM_MB, CLAM_SB
+from sklearn.preprocessing import label_binarize
+from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.metrics import auc as calc_auc
 
 class Accuracy_Logger(object):
     """Accuracy logger"""
@@ -22,10 +24,14 @@ class Accuracy_Logger(object):
         Y = int(Y)
         self.data[Y]["count"] += 1
         self.data[Y]["correct"] += (Y_hat == Y)
-
-    def log_batch(self, count, correct, c):
-        self.data[c]["count"] += count
-        self.data[c]["correct"] += correct
+    
+    def log_batch(self, Y_hat, Y):
+        Y_hat = np.array(Y_hat).astype(int)
+        Y = np.array(Y).astype(int)
+        for label_class in np.unique(Y):
+            cls_mask = Y == label_class
+            self.data[label_class]["count"] += cls_mask.sum()
+            self.data[label_class]["correct"] += (Y_hat[cls_mask] == Y[cls_mask]).sum()
     
     def get_summary(self, c):
         count = self.data[c]["count"] 
@@ -123,7 +129,13 @@ def train(datasets, cur, args):
     if args.model_size is not None and args.model_type != 'mil':
         model_dict.update({"size_arg": args.model_size})
     
-    if args.model_type =='clam':
+    if args.model_type in ['clam_sb', 'clam_mb']:
+        if args.subtyping:
+            model_dict.update({'subtyping': True})
+        
+        if args.B > 0:
+            model_dict.update({'k_sample': args.B})
+        
         if args.inst_loss == 'svm':
             from topk import SmoothTop1SVM
             instance_loss_fn = SmoothTop1SVM(n_classes = 2)
@@ -132,7 +144,12 @@ def train(datasets, cur, args):
         else:
             instance_loss_fn = nn.CrossEntropyLoss()
         
-        model = CLAM(**model_dict, instance_loss_fn=instance_loss_fn)
+        if args.model_type =='clam_sb':
+            model = CLAM_SB(**model_dict, instance_loss_fn=instance_loss_fn)
+        elif args.model_type == 'clam_mb':
+            model = CLAM_MB(**model_dict, instance_loss_fn=instance_loss_fn)
+        else:
+            raise NotImplementedError
     
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
@@ -163,7 +180,7 @@ def train(datasets, cur, args):
     print('Done!')
 
     for epoch in range(args.max_epochs):
-        if args.model_type == 'clam':     
+        if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:     
             train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn)
             stop = validate_clam(cur, epoch, model, val_loader, args.n_classes, 
                 early_stopping, writer, loss_fn, args.results_dir)
@@ -215,8 +232,6 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
     train_inst_loss = 0.
     inst_count = 0
 
-    sample_size = model.k_sample
-
     print('\n')
     for batch_idx, (data, label) in enumerate(loader):
         data, label = data.to(device), label.to(device)
@@ -233,10 +248,12 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         
         total_loss = bag_weight * loss + (1-bag_weight) * instance_loss 
 
-        p_acc = instance_dict['p_acc']
-        n_acc = instance_dict['n_acc']
-        inst_logger.log_batch(sample_size, int(p_acc * sample_size), 1)
-        inst_logger.log_batch(sample_size, int(n_acc * sample_size), 0)
+        inst_preds = instance_dict['inst_preds']
+        inst_labels = instance_dict['inst_labels']
+        inst_logger.log_batch(inst_preds, inst_labels)
+        n_mask = np.equal(inst_labels, 0)
+        n_acc = (inst_labels[n_mask] == inst_preds[n_mask]).mean()
+        p_acc = (inst_labels[~n_mask] == inst_preds[~n_mask]).mean()
 
         train_loss += loss_value
         if (batch_idx + 1) % 5 == 0:
@@ -270,7 +287,7 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-        if writer:
+        if writer and acc is not None:
             writer.add_scalar('train/class_{}_acc'.format(i), acc, epoch)
 
     if writer:
@@ -386,7 +403,7 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
 
     return False
 
-def validate_clam(cur, epoch, model, loader, n_classes,  early_stopping = None, writer = None, loss_fn = None, results_dir = None):
+def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, writer = None, loss_fn = None, results_dir = None):
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
@@ -416,10 +433,13 @@ def validate_clam(cur, epoch, model, loader, n_classes,  early_stopping = None, 
             inst_count+=1
             instance_loss_value = instance_loss.item()
             val_inst_loss += instance_loss_value
-            p_acc = instance_dict['p_acc']
-            n_acc = instance_dict['n_acc']
-            inst_logger.log_batch(sample_size, int(p_acc * sample_size), 1)
-            inst_logger.log_batch(sample_size, int(n_acc * sample_size), 0)
+
+            inst_preds = instance_dict['inst_preds']
+            inst_labels = instance_dict['inst_labels']
+            inst_logger.log_batch(inst_preds, inst_labels)
+            n_mask = np.equal(inst_labels, 0)
+            n_acc = (inst_labels[n_mask] == inst_preds[n_mask]).mean()
+            p_acc = (inst_labels[~n_mask] == inst_preds[~n_mask]).mean()
 
             prob[batch_idx] = Y_prob.cpu().numpy()
             labels[batch_idx] = label.item()
@@ -432,9 +452,18 @@ def validate_clam(cur, epoch, model, loader, n_classes,  early_stopping = None, 
 
     if n_classes == 2:
         auc = roc_auc_score(labels, prob[:, 1])
-    
+        aucs = []
     else:
-        auc = roc_auc_score(labels, prob, multi_class='ovr')
+        aucs = []
+        binary_labels = label_binarize(labels, classes=[i for i in range(n_classes)])
+        for class_idx in range(n_classes):
+            if class_idx in labels:
+                fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], prob[:, class_idx])
+                aucs.append(calc_auc(fpr, tpr))
+            else:
+                aucs.append(float('nan'))
+
+        auc = np.nanmean(np.array(aucs))
 
     print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}, auc: {:.4f}'.format(val_loss, val_error, auc))
     if inst_count > 0:
@@ -446,7 +475,6 @@ def validate_clam(cur, epoch, model, loader, n_classes,  early_stopping = None, 
             if writer:
                 writer.add_scalar('val/inst_class_{}_acc'.format(i), acc, epoch)
     
-    
     if writer:
         writer.add_scalar('val/loss', val_loss, epoch)
         writer.add_scalar('val/auc', auc, epoch)
@@ -457,7 +485,7 @@ def validate_clam(cur, epoch, model, loader, n_classes,  early_stopping = None, 
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-        if writer:
+        if writer and acc is not None:
             writer.add_scalar('val/class_{}_acc'.format(i), acc, epoch)
      
 
@@ -503,9 +531,18 @@ def summary(model, loader, n_classes):
 
     if n_classes == 2:
         auc = roc_auc_score(all_labels, all_probs[:, 1])
-
+        aucs = []
     else:
-        auc = roc_auc_score(all_labels, all_probs, multi_class='ovr')
+        aucs = []
+        binary_labels = label_binarize(all_labels, classes=[i for i in range(n_classes)])
+        for class_idx in range(n_classes):
+            if class_idx in all_labels:
+                fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], all_probs[:, class_idx])
+                aucs.append(calc_auc(fpr, tpr))
+            else:
+                aucs.append(float('nan'))
+
+        auc = np.nanmean(np.array(aucs))
 
 
     return patient_results, test_error, auc, acc_logger

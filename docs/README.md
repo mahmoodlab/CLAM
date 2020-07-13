@@ -203,15 +203,17 @@ python create_splits_seq.py --task camelyon_40x_cv --seed 1 --label_frac 0.75 --
 The script uses the **Generic_WSI_Classification_Dataset** Class for which the constructor expects the same arguments as 
 **Generic_MIL_Dataset** (without the data_dir argument). For details, please refer to the dataset definition in **datasets/dataset_generic.py**
 
+
 ### GPU Training Example for Subtyping Problems (3-class RCC Subtyping)
 ``` shell
-CUDA_VISIBLE_DEVICES=0,1 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code tcga_kidney_cv_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task tcga_kidney_cv --model_type clam --log_data --subtyping --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0,1 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code tcga_kidney_cv_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task tcga_kidney_cv --model_type clam_sb --log_data --subtyping --data_root_dir DATA_ROOT_DIR
 ``` 
-
 ### GPU Training Example for Binary Positive vs. Negative Classification (Lymph Node Status)
 ``` shell
-CUDA_VISIBLE_DEVICES=0,1 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code camelyon_40x_cv_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task camelyon_40x_cv --model_type clam --log_data --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0,1 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code camelyon_40x_cv_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task camelyon_40x_cv --model_type clam_sb --log_data --data_root_dir DATA_ROOT_DIR
 ```
+**Note: we have now added the option to use a single-attention-branch CLAM model, which performs favoribly in most experiments and can be set via --model_type clam_sb instead of clam_mb (originally denoted as clam). clam_sb has been changed to be the default choice. Additionally, the user can adjust clam specific paramters as specified in the argparser in main.py. For example, to run clam without the clustering constraint, the user can enable --no_inst_cluster.**
+
 By default results will be saved to **results/exp_code** corresponding to the exp_code input argument from the user. If tensorboard logging is enabled (with the arugment toggle --log_data), the user can go into the results folder for the particular experiment, run:
 ``` shell
 tensorboard --logdir=.
@@ -225,11 +227,11 @@ python main.py -h
 ### Testing and Evaluation Script
 User also has the option of using the evluation script to test the performances of trained models. Examples corresponding to the models trained above are provided below:
 ``` shell
-CUDA_VISIBLE_DEVICES=0,1 python eval.py --drop_out --k 10 --models_exp_code camelyon_40x_cv_CLAM_50_s1 --save_exp_code camelyon_40x_cv_CLAM_50_s1_cv --task camelyon_40x_cv --model_type clam --results_dir results --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0,1 python eval.py --drop_out --k 10 --models_exp_code camelyon_40x_cv_CLAM_50_s1 --save_exp_code camelyon_40x_cv_CLAM_50_s1_cv --task camelyon_40x_cv --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR
 ```
 
 ``` shell
-CUDA_VISIBLE_DEVICES=0,1 python eval.py --drop_out --k 10 --models_exp_code tcga_kidney_cv_CLAM_50_s1 --save_exp_code tcga_kidney_cv_CLAM_50_s1_cv --task tcga_kidney_cv --model_type clam --results_dir results --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0,1 python eval.py --drop_out --k 10 --models_exp_code tcga_kidney_cv_CLAM_50_s1 --save_exp_code tcga_kidney_cv_CLAM_50_s1_cv --task tcga_kidney_cv --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR
 ```
 
 Once again, for information on each commandline argument, see:
@@ -241,9 +243,11 @@ By adding your own custom datasets into **eval.py** the same way as you do for *
 
 ### Trained Model Checkpoints
 For reproducability, all trained models and their corresponding train/val/test splits used can be accessed [here](https://drive.google.com/drive/folders/1NZ82z0U_cexP6zkx1mRk-QeJyKWk4Q7z?usp=sharing).
-The 3 main folders (**tcga_kidney_cv**, **tcga_cptac_lung_cv** and **camelyon_40x_cv**) correspond to models for RCC subtyping trained on the TCGA, for NSCLC subtyping trained on TCGA and CPTAC and for Lymph Node Metastasis (Breast) detection trained on Camelyon16+17 respectively. In each main folder, each subfolder corresponds to one set of 10-fold cross-validation experiments. For example, the subfolder tcga_kidney_cv_CLAM_50_s1 contains the 10 checkpoints corresponding to the 10 cross-validation folds for TCGA RCC subtyping, trained using CLAM with 50% of cases in the full training set. 
+The 3 main folders (**tcga_kidney_cv**, **tcga_cptac_lung_cv** and **camelyon_40x_cv**) correspond to models for RCC subtyping trained on the TCGA, for NSCLC subtyping trained on TCGA and CPTAC and for Lymph Node Metastasis (Breast) detection trained on Camelyon16+17 respectively. In each main folder, each subfolder corresponds to one set of 10-fold cross-validation experiments. For example, the subfolder tcga_kidney_cv_CLAM_50_s1 contains the 10 checkpoints corresponding to the 10 cross-validation folds for TCGA RCC subtyping, trained using CLAM with multi-attention branches using 50% of cases in the full training set. 
 
-For reproducability, these models can be evaluated on data prepared by following the same pipeline described in the sections above by calling **eval.py** with the appropriate arguments that specify the model options (--dropout should be enabled and either --model_type clam or --model_type mil should be set, for evaluation only, --subtyping flag does not make a difference) as well as where the model checkpoints (--results_dir and --models_exp_code) and data (--data_root_dir and --task) are stored.
+For reproducability, these models can be evaluated on data prepared by following the same pipeline described in the sections above by calling **eval.py** with the appropriate arguments that specify the model options (--dropout should be enabled and either --model_type clam_mb or --model_type mil should be set, for evaluation only, --subtyping flag does not make a difference) as well as where the model checkpoints (--results_dir and --models_exp_code) and data (--data_root_dir and --task) are stored.
+
+**TODO: update**
 
 ### Examples
 

@@ -4,25 +4,27 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from models.model_mil import MIL_fc, MIL_fc_mc
-from models.model_clam import CLAM
+from models.model_clam import CLAM_SB, CLAM_MB
 import pdb
 import os
 import pandas as pd
 from utils.utils import *
 from utils.core_utils import Accuracy_Logger
 from sklearn.metrics import roc_auc_score, roc_curve, auc
+from sklearn.preprocessing import label_binarize
 import matplotlib.pyplot as plt
 
 def initiate_model(args, ckpt_path):
     print('Init Model')    
     model_dict = {"dropout": args.drop_out, 'n_classes': args.n_classes}
     
-    if args.model_size is not None and args.model_type != 'mil':
+    if args.model_size is not None and args.model_type in ['clam_sb', 'clam_mb']:
         model_dict.update({"size_arg": args.model_size})
     
-    if args.model_type =='clam':
-        model = CLAM(**model_dict)
-        
+    if args.model_type =='clam_sb':
+        model = CLAM_SB(**model_dict)
+    elif args.model_type =='clam_mb':
+        model = CLAM_MB(**model_dict)
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
             model = MIL_fc_mc(**model_dict)
@@ -92,18 +94,26 @@ def summary(model, loader, args):
 
     if len(np.unique(all_labels)) == 1:
         auc_score = -1
-    else:
+
+    else: 
         if args.n_classes == 2:
             auc_score = roc_auc_score(all_labels, all_probs[:, 1])
-
+            aucs = []
         else:
+            aucs = []
+            binary_labels = label_binarize(all_labels, classes=[i for i in range(args.n_classes)])
+            for class_idx in range(args.n_classes):
+                if class_idx in all_labels:
+                    fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], all_probs[:, class_idx])
+                    aucs.append(auc(fpr, tpr))
+                else:
+                    aucs.append(float('nan'))
             if args.micro_average:
-                from sklearn.preprocessing import label_binarize
                 binary_labels = label_binarize(all_labels, classes=[i for i in range(args.n_classes)])
                 fpr, tpr, _ = roc_curve(binary_labels.ravel(), all_probs.ravel())
                 auc_score = auc(fpr, tpr)
             else:
-                auc_score = roc_auc_score(all_labels, all_probs, multi_class='ovr')
+                auc_score = np.nanmean(np.array(aucs))
 
     results_dict = {'slide_id': slide_ids, 'Y': all_labels, 'Y_hat': all_preds}
     for c in range(args.n_classes):
