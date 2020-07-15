@@ -212,7 +212,7 @@ CUDA_VISIBLE_DEVICES=0,1 python main.py --drop_out --early_stopping --lr 2e-4 --
 ``` shell
 CUDA_VISIBLE_DEVICES=0,1 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code camelyon_40x_cv_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task camelyon_40x_cv --model_type clam_sb --log_data --data_root_dir DATA_ROOT_DIR
 ```
-**Note: we have now added the option to use a single-attention-branch CLAM model, which performs favoribly in most experiments and can be set via --model_type clam_sb instead of clam_mb (originally denoted as clam). clam_sb has been changed to be the default choice. Additionally, the user can adjust CLAM-specific settings as specified in the argparser in main.py. For example, to run CLAM without the clustering constraint, the user can enable --no_inst_cluster.**
+Note: we have now added the option to use a single-attention-branch CLAM model, which performs favoribly in most experiments and can be set via --model_type clam_sb instead of clam_mb (originally denoted as clam). clam_sb has been changed to be the default choice. Additionally, the user can adjust CLAM-specific settings as specified in the argparser in main.py. For example, the number of patches used for clustering can be set via --B.
 
 By default results will be saved to **results/exp_code** corresponding to the exp_code input argument from the user. If tensorboard logging is enabled (with the arugment toggle --log_data), the user can go into the results folder for the particular experiment, run:
 ``` shell
