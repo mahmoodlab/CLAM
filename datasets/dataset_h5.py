@@ -39,7 +39,8 @@ class Whole_Slide_Bag(Dataset):
 	def __init__(self,
 		file_path,
 		pretrained=False,
-		custom_transforms=None
+		custom_transforms=None,
+		target_patch_size=-1,
 		):
 		"""
 		Args:
@@ -48,6 +49,10 @@ class Whole_Slide_Bag(Dataset):
 			custom_transforms (callable, optional): Optional transform to be applied on a sample
 		"""
 		self.pretrained=pretrained
+		if target_patch_size > 0:
+			self.target_patch_size = (target_patch_size, target_patch_size)
+		else:
+			self.target_patch_size = None
 
 		if not custom_transforms:
 			self.roi_transforms = eval_transforms(pretrained=pretrained)
@@ -73,6 +78,8 @@ class Whole_Slide_Bag(Dataset):
 
 		print('pretrained:', self.pretrained)
 		print('transformations:', self.roi_transforms)
+		if self.target_patch_size is not None:
+			print('target_size: ', self.target_patch_size)
 
 	def __getitem__(self, idx):
 		with h5py.File(self.file_path,'r') as hdf5_file:
@@ -80,6 +87,8 @@ class Whole_Slide_Bag(Dataset):
 			coord = hdf5_file['coords'][idx]
 		
 		img = Image.fromarray(img)
+		if self.target_patch_size is not None:
+			img = img.resize(self.target_patch_size)
 		img = self.roi_transforms(img).unsqueeze(0)
 		return img, coord
 

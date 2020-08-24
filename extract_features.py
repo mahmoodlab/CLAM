@@ -36,7 +36,8 @@ def save_hdf5(output_dir, asset_dict, mode='a'):
 	return output_dir
 
 
-def compute_w_loader(file_path, output_path, model, batch_size = 8, verbose = 0, print_every=20, pretrained=True):
+def compute_w_loader(file_path, output_path, model, batch_size = 8, verbose = 0, 
+	  				 print_every=20, pretrained=True, target_patch_size=-1):
 	"""
 	args:
 		file_path: directory of bag (.h5 file)
@@ -46,7 +47,8 @@ def compute_w_loader(file_path, output_path, model, batch_size = 8, verbose = 0,
 		verbose: level of feedback
 		pretrained: use weights pretrained on imagenet
 	"""
-	dataset = Whole_Slide_Bag(file_path=file_path, pretrained=pretrained)
+	dataset = Whole_Slide_Bag(file_path=file_path, pretrained=pretrained, 
+							  target_patch_size=target_patch_size)
 	x, y = dataset[0]
 	kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
 	loader = DataLoader(dataset=dataset, batch_size=batch_size, **kwargs, collate_fn=collate_features)
@@ -79,6 +81,8 @@ parser.add_argument('--csv_path', type=str)
 parser.add_argument('--feat_dir', type=str)
 parser.add_argument('--batch_size', type=int, default=256)
 parser.add_argument('--no_auto_skip', default=False, action='store_true')
+parser.add_argument('--target_patch_size', type=int, default=-1,
+					help='the desired size of patches for optional scaling before feature embedding')
 args = parser.parse_args()
 
 
@@ -118,7 +122,9 @@ if __name__ == '__main__':
 			file_path = bag_candidate
 			time_start = time.time()
 			output_file_path = compute_w_loader(file_path, output_path, 
-			model = model, batch_size = args.batch_size, verbose = 1, print_every = 20)
+												model = model, batch_size = args.batch_size, 
+												verbose = 1, print_every = 20,
+												target_patch_size=args.target_patch_size)
 			time_elapsed = time.time() - time_start
 			print('\ncomputing features for {} took {} s'.format(output_file_path, time_elapsed))
 			file = h5py.File(output_file_path, "r")

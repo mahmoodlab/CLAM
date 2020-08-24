@@ -243,15 +243,21 @@ class WholeSlideImage(object):
         
         if custom_downsample > 1:
             assert custom_downsample == 2 
-            target_patch_size = patch_size
-            patch_size = target_patch_size * 2
+            # the target size is what's specified by patch_size
+            target_patch_size = patch_size 
+            # the actual patches that we want to take is 2 * target_size for each dimension
+            patch_size = target_patch_size * 2 
+            # similarly, the step size is 2 * what's specified
             step_size = step_size * 2
             print("Custom Downsample: {}, Patching at {} x {}, But Final Patch Size is {} x {}".format(custom_downsample, patch_size, patch_size, 
                 target_patch_size, target_patch_size))
 
+        # the downsample corresponding to the patch_level
         patch_downsample = (int(self.level_downsamples[patch_level][0]), int(self.level_downsamples[patch_level][1]))
+        # size of patch at level 0 (reference size)
         ref_patch_size = (patch_size*patch_downsample[0], patch_size*patch_downsample[1])
         
+        # step sizes to take at levl 0
         step_size_x = step_size * patch_downsample[0]
         step_size_y = step_size * patch_downsample[1]
         
@@ -288,6 +294,7 @@ class WholeSlideImage(object):
                     if self.isBlackPatch(np.array(patch_PIL), rgbThresh=black_thresh) or self.isWhitePatch(np.array(patch_PIL), satThresh=white_thresh): 
                         continue
 
+                # x, y coordinates become the coordinates in the downsample, and no long correspond to level 0 of WSI
                 patch_info = {'x':x // (patch_downsample[0] * custom_downsample), 'y':y // (patch_downsample[1] * custom_downsample), 'cont_idx':cont_idx, 'patch_level':patch_level, 
                 'downsample': self.level_downsamples[patch_level], 'downsampled_level_dim': tuple(np.array(self.level_dim[patch_level])//custom_downsample), 'level_dim': self.level_dim[patch_level],
                 'patch_PIL':patch_PIL, 'name':self.name, 'save_path':save_path}

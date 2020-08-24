@@ -33,9 +33,6 @@ def initiate_model(args, ckpt_path):
 
     print_network(model)
 
-    # ckpt = torch.load(ckpt_path)
-    # model.load_state_dict(ckpt, strict=False)
-
     ckpt = torch.load(ckpt_path)
     ckpt_clean = {}
     for key in ckpt.keys():
@@ -92,15 +89,14 @@ def summary(model, loader, args):
     del data
     test_error /= len(loader)
 
+    aucs = []
     if len(np.unique(all_labels)) == 1:
         auc_score = -1
 
     else: 
         if args.n_classes == 2:
             auc_score = roc_auc_score(all_labels, all_probs[:, 1])
-            aucs = []
         else:
-            aucs = []
             binary_labels = label_binarize(all_labels, classes=[i for i in range(args.n_classes)])
             for class_idx in range(args.n_classes):
                 if class_idx in all_labels:
