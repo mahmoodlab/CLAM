@@ -206,11 +206,11 @@ The script uses the **Generic_WSI_Classification_Dataset** Class for which the c
 
 ### GPU Training Example for Subtyping Problems (3-class RCC Subtyping)
 ``` shell
-CUDA_VISIBLE_DEVICES=0,1 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code tcga_kidney_cv_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task tcga_kidney_cv --model_type clam_sb --log_data --subtyping --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code tcga_kidney_cv_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task tcga_kidney_cv --model_type clam_sb --log_data --subtyping --data_root_dir DATA_ROOT_DIR
 ``` 
 ### GPU Training Example for Binary Positive vs. Negative Classification (Lymph Node Status)
 ``` shell
-CUDA_VISIBLE_DEVICES=0,1 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code camelyon_40x_cv_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task camelyon_40x_cv --model_type clam_sb --log_data --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code camelyon_40x_cv_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task camelyon_40x_cv --model_type clam_sb --log_data --data_root_dir DATA_ROOT_DIR
 ```
 Note: We have included the option to use a single-attention-branch CLAM model, which performs favoribly in most experiments and can be set via --model_type clam_sb (single branch) or clam_mb (multi branch). clam_sb is the default choice. Additionally, the user can adjust the number of patches used for clustering via --B.
 
@@ -227,11 +227,11 @@ python main.py -h
 ### Testing and Evaluation Script
 User also has the option of using the evluation script to test the performances of trained models. Examples corresponding to the models trained above are provided below:
 ``` shell
-CUDA_VISIBLE_DEVICES=0,1 python eval.py --drop_out --k 10 --models_exp_code camelyon_40x_cv_CLAM_50_s1 --save_exp_code camelyon_40x_cv_CLAM_50_s1_cv --task camelyon_40x_cv --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --models_exp_code camelyon_40x_cv_CLAM_50_s1 --save_exp_code camelyon_40x_cv_CLAM_50_s1_cv --task camelyon_40x_cv --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR
 ```
 
 ``` shell
-CUDA_VISIBLE_DEVICES=0,1 python eval.py --drop_out --k 10 --models_exp_code tcga_kidney_cv_CLAM_50_s1 --save_exp_code tcga_kidney_cv_CLAM_50_s1_cv --task tcga_kidney_cv --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --models_exp_code tcga_kidney_cv_CLAM_50_s1 --save_exp_code tcga_kidney_cv_CLAM_50_s1_cv --task tcga_kidney_cv --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR
 ```
 
 Once again, for information on each commandline argument, see:
