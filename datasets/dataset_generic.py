@@ -175,7 +175,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 
 		if len(split) > 0:
 			mask = self.slide_data['slide_id'].isin(split.tolist())
-			df_slice = self.slide_data[mask].dropna().reset_index(drop=True)
+			df_slice = self.slide_data[mask].reset_index(drop=True)
 			split = Generic_Split(df_slice, data_dir=self.data_dir, num_classes=self.num_classes)
 		else:
 			split = None
@@ -191,7 +191,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 
 		if len(split) > 0:
 			mask = self.slide_data['slide_id'].isin(merged_split)
-			df_slice = self.slide_data[mask].dropna().reset_index(drop=True)
+			df_slice = self.slide_data[mask].reset_index(drop=True)
 			split = Generic_Split(df_slice, data_dir=self.data_dir, num_classes=self.num_classes)
 		else:
 			split = None
