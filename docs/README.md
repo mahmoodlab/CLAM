@@ -6,7 +6,7 @@ Nature Biomedical Engineering - In Press.
 
 [ArXiv](https://arxiv.org/abs/2004.09666) | [Interactive Demo](http://clam.mahmoodlab.org) | [Cite](#reference)
 
-***TL;DR:** CLAM is a high-throughput and interpretable method for data efficient whole slide image (WSI) classification using slide-level labels without any ROI extraction or patch-level annotations, and is capable of handling multi-class subtyping problems. Tested on three different WSI datasets, trained models adapt to independent test cohorts of WSI resections and biopsies as well as cellphone microscopy data.*
+***TL;DR:** CLAM is a high-throughput and interpretable method for data efficient whole slide image (WSI) classification using slide-level labels without any ROI extraction or patch-level annotations, and is capable of handling multi-class subtyping problems. Tested on three different WSI datasets, trained models adapt to independent test cohorts of WSI resections and biopsies as well as smartphone microscopy images (photomicrographs).*
 
 [<img src="ani.gif" width="470px" align="left" />](http://clam.mahmoodlab.org)
 ## CLAM: A Deep-Learning-based Pipeline for Data Efficient and Weakly Supervised Whole-Slide-level Analysis 
