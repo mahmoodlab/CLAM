@@ -1,6 +1,7 @@
 CLAM <img src="clam-logo.png" width="280px" align="right" />
 ===========
 Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Images.
+
 Nature Biomedical Engineering - In Press. 
 
 [ArXiv](https://arxiv.org/abs/2004.09666) | [Interactive Demo](http://clam.mahmoodlab.org) | [Cite](#reference)
