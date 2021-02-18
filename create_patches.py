@@ -39,8 +39,16 @@ def patching(WSI_object, **kwargs):
 	return file_path, patch_time_elapsed
 
 def initialize_df(slides, seg_params, filter_params, vis_params, patch_params):
+
 	total = len(slides)
-	df = pd.DataFrame({'slide_id': slides, 'process': np.full((total), 1, dtype=np.uint8), 
+	if isinstance(slides, pd.DataFrame):
+		slide_ids = slides.slide_id.values
+	else:
+		slide_ids = slides
+	default_df_dict = {'slide_id': slide_ids, 'process': np.full((total), 1, dtype=np.uint8)}
+
+	# initiate empty labels in case not provided	
+	default_df_dict.update({
 		'status': np.full((total), 'tbp'),
 		
 		# seg params
@@ -65,7 +73,21 @@ def initialize_df(slides, seg_params, filter_params, vis_params, patch_params):
 		'use_padding': np.full((total), bool(patch_params['use_padding']), dtype=bool),
 		'contour_fn': np.full((total), patch_params['contour_fn'])
 		})
-	return df
+
+	if isinstance(slides, pd.DataFrame):
+		temp_copy = pd.DataFrame(default_df_dict) # temporary dataframe w/ default params
+		# find key in provided df
+		# if exist, fill empty fields w/ default values, else, insert the default values as a new column
+		for key in default_df_dict.keys(): 
+			if key in slides.columns:
+				mask = slides[key].isna()
+				slides.loc[mask, key] = temp_copy.loc[mask, key]
+			else:
+				slides.insert(len(slides.columns), key, default_df_dict[key])
+	else:
+		slides = pd.DataFrame(default_df_dict)
+	
+	return slides
 
 def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_dir, 
 				  patch_size = 256, step_size = 256, custom_downsample=1, 
@@ -83,11 +105,14 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
 	slides = sorted(os.listdir(source))
 	slides = [slide for slide in slides if os.path.isfile(os.path.join(source, slide))]
+
 	if process_list is None:
 		df = initialize_df(slides, seg_params, filter_params, vis_params, patch_params)
 	
 	else:
 		df = pd.read_csv(process_list)
+		df = initialize_df(df, seg_params, filter_params, vis_params, patch_params)
+
 
 	mask = df['process'] == 1
 	process_stack = df[mask]
