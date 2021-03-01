@@ -476,7 +476,7 @@ class WholeSlideImage(object):
         else:
             return None
 
-    def visHeatmap(self, scores, coords, vis_level=0, 
+    def visHeatmap(self, scores, coords, vis_level=-1, 
                    top_left=None, bot_right=None,
                    patch_size=(256, 256), 
                    blank_canvas=False, canvas_color=(220, 20, 50), alpha=0.4, 
@@ -492,6 +492,7 @@ class WholeSlideImage(object):
         Args:
             scores (numpy array of float): Attention scores 
             coords (numpy array of int, n_patches x 2): Corresponding coordinates (relative to lvl 0)
+            vis_level (int): WSI pyramid level to visualize
             patch_size (tuple of int): Patch dimensions (relative to lvl 0)
             blank_canvas (bool): Whether to use a blank canvas to draw the heatmap (vs. using the original slide)
             canvas_color (tuple of uint8): Canvas color
@@ -513,6 +514,9 @@ class WholeSlideImage(object):
         downsample = self.level_downsamples[vis_level]
         scale = [1/downsample[0], 1/downsample[1]] # Scaling from 0 to desired level
         
+        if vis_level < 0:
+            vis_level = self.wsi.get_best_level_for_downsample(32)
+                
         if len(scores.shape) == 2:
             scores = scores.flatten()
 
