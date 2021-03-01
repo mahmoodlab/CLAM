@@ -20,7 +20,13 @@ from utils.file_utils import load_pkl, save_pkl
 Image.MAX_IMAGE_PIXELS = 933120000
 
 class WholeSlideImage(object):
-    def __init__(self, path, xml_path=None, hdf5_file=None):
+    def __init__(self, path):
+
+        """
+        Args:
+            path (str): fullpath to WSI file
+        """
+
         self.name = ".".join(path.split("/")[-1].split('.')[:-1])
         self.wsi = openslide.open_slide(path)
         self.level_downsamples = self._assertLevelDownsamples()
@@ -28,7 +34,7 @@ class WholeSlideImage(object):
     
         self.contours_tissue = None
         self.contours_tumor = None
-        self.hdf5_file = hdf5_file
+        self.hdf5_file = None
 
     def getOpenSlide(self):
         return self.wsi
@@ -70,15 +76,16 @@ class WholeSlideImage(object):
         self.contours_tumor = sorted(self.contours_tumor, key=cv2.contourArea, reverse=True)
 
     def initSegmentation(self, mask_file):
+        # load segmentation results from pickle file
         import pickle
         asset_dict = load_pkl(mask_file)
         self.holes_tissue = asset_dict['holes']
         self.contours_tissue = asset_dict['tissue']
 
     def saveSegmentation(self, mask_file):
+        # save segmentation results using pickle
         asset_dict = {'holes': self.holes_tissue, 'tissue': self.contours_tissue}
         save_pkl(mask_file, asset_dict)
-
 
     def segmentTissue(self, seg_level=0, sthresh=20, sthresh_up = 255, mthresh=7, close = 0, use_otsu=False, 
                             filter_params={'a_t':100}, ref_patch_size=512, exclude_ids=[], keep_ids=[]):
