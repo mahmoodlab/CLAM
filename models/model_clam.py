@@ -101,11 +101,7 @@ class CLAM_SB(nn.Module):
 
     def relocate(self):
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if torch.cuda.device_count() > 1:
-            device_ids = list(range(torch.cuda.device_count()))
-            self.attention_net = nn.DataParallel(self.attention_net, device_ids=device_ids).to('cuda:0')
-        else:
-            self.attention_net = self.attention_net.to(device)
+        self.attention_net = self.attention_net.to(device)
         self.classifiers = self.classifiers.to(device)
         self.instance_classifiers = self.instance_classifiers.to(device)
     

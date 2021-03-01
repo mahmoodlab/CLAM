@@ -80,6 +80,7 @@ parser.add_argument('--data_dir', type=str)
 parser.add_argument('--csv_path', type=str)
 parser.add_argument('--feat_dir', type=str)
 parser.add_argument('--batch_size', type=int, default=256)
+parser.add_argument('--slide_ext', type=str, default= '.svs')
 parser.add_argument('--no_auto_skip', default=False, action='store_true')
 parser.add_argument('--target_patch_size', type=int, default=-1,
 					help='the desired size of patches for optional scaling before feature embedding')
@@ -90,7 +91,7 @@ if __name__ == '__main__':
 
 	print('initializing dataset')
 	csv_path = args.csv_path
-	bags_dataset = Dataset_All_Bags(args.data_dir, csv_path)
+	bags_dataset = Dataset_All_Bags(csv_path)
 	
 	os.makedirs(args.feat_dir, exist_ok=True)
 	dest_files = os.listdir(args.feat_dir)
@@ -107,33 +108,30 @@ if __name__ == '__main__':
 	total = len(bags_dataset)
 
 	for bag_candidate_idx in range(total):
-		bag_candidate = bags_dataset[bag_candidate_idx]
-		bag_name = os.path.basename(os.path.normpath(bag_candidate))
+		slide_id = bags_dataset[bag_candidate_idx].split(args.slide_ext)[0]
+		bag_name = slide_id + '.h5'
+		bag_candidate = os.path.join(args.data_dir, 'patches', bag_name)
 
-		if '.h5' in bag_candidate:
+		print('\nprogress: {}/{}'.format(bag_candidate_idx, total))
+		print(bag_name)
+		if not args.no_auto_skip and slide_id+'.pt' in dest_files:
+			print('skipped {}'.format(slide_id))
+			continue 
 
-			print('\nprogress: {}/{}'.format(bag_candidate_idx, total))
-			print(bag_name)
-			if not args.no_auto_skip and bag_name in dest_files:
-				print('skipped {}'.format(bag_name))
-				continue
+		output_path = os.path.join(args.feat_dir, 'h5_files', bag_name)
+		file_path = bag_candidate
+		time_start = time.time()
+		output_file_path = compute_w_loader(file_path, output_path, 
+											model = model, batch_size = args.batch_size, 
+											verbose = 1, print_every = 20,
+											target_patch_size=args.target_patch_size)
+		time_elapsed = time.time() - time_start
+		print('\ncomputing features for {} took {} s'.format(output_file_path, time_elapsed))
+		file = h5py.File(output_file_path, "r")
 
-			output_path = os.path.join(args.feat_dir, bag_name)
-			file_path = bag_candidate
-			time_start = time.time()
-			output_file_path = compute_w_loader(file_path, output_path, 
-												model = model, batch_size = args.batch_size, 
-												verbose = 1, print_every = 20,
-												target_patch_size=args.target_patch_size)
-			time_elapsed = time.time() - time_start
-			print('\ncomputing features for {} took {} s'.format(output_file_path, time_elapsed))
-			file = h5py.File(output_file_path, "r")
-
-			features = file['features'][:]
-			print('features size: ', features.shape)
-			print('coordinates size: ', file['coords'].shape)
-			features = torch.from_numpy(features)
-			bag_base, _ = os.path.splitext(bag_name)
-			torch.save(features, os.path.join(args.feat_dir, bag_base+'.pt'))
-
-
+		features = file['features'][:]
+		print('features size: ', features.shape)
+		print('coordinates size: ', file['coords'].shape)
+		features = torch.from_numpy(features)
+		bag_base, _ = os.path.splitext(bag_name)
+		torch.save(features, os.path.join(args.feat_dir, 'pt_files', bag_base+'.pt'))

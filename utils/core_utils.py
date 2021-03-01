@@ -251,14 +251,11 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         inst_preds = instance_dict['inst_preds']
         inst_labels = instance_dict['inst_labels']
         inst_logger.log_batch(inst_preds, inst_labels)
-        n_mask = np.equal(inst_labels, 0)
-        n_acc = (inst_labels[n_mask] == inst_preds[n_mask]).mean()
-        p_acc = (inst_labels[~n_mask] == inst_preds[~n_mask]).mean()
 
         train_loss += loss_value
-        if (batch_idx + 1) % 5 == 0:
+        if (batch_idx + 1) % 20 == 0:
             print('batch {}, loss: {:.4f}, instance_loss: {:.4f}, weighted_loss: {:.4f}, '.format(batch_idx, loss_value, instance_loss_value, total_loss.item()) + 
-                'inst_p_acc: {:.4f}, inst_n_acc: {:.4f}, label: {}, bag_size: {}'.format(p_acc, n_acc, label.item(), data.size(0)))
+                'label: {}, bag_size: {}'.format(label.item(), data.size(0)))
 
         error = calculate_error(Y_hat, label)
         train_error += error
@@ -279,9 +276,6 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         for i in range(2):
             acc, correct, count = inst_logger.get_summary(i)
             print('class {} clustering acc {}: correct {}/{}'.format(i, acc, correct, count))
-        
-            if writer:
-                writer.add_scalar('train/inst_class_{}_acc'.format(i), acc, epoch)
 
     print('Epoch: {}, train_loss: {:.4f}, train_clustering_loss:  {:.4f}, train_error: {:.4f}'.format(epoch, train_loss, train_inst_loss,  train_error))
     for i in range(n_classes):
@@ -313,7 +307,7 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         loss_value = loss.item()
         
         train_loss += loss_value
-        if (batch_idx + 1) % 5 == 0:
+        if (batch_idx + 1) % 20 == 0:
             print('batch {}, loss: {:.4f}, label: {}, bag_size: {}'.format(batch_idx, loss_value, label.item(), data.size(0)))
            
         error = calculate_error(Y_hat, label)
@@ -388,10 +382,7 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
     print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}, auc: {:.4f}'.format(val_loss, val_error, auc))
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
-        print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-        if writer:
-            writer.add_scalar('val/class_{}_acc'.format(i), acc, epoch)
-     
+        print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))     
 
     if early_stopping:
         assert results_dir
@@ -437,9 +428,6 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
             inst_preds = instance_dict['inst_preds']
             inst_labels = instance_dict['inst_labels']
             inst_logger.log_batch(inst_preds, inst_labels)
-            n_mask = np.equal(inst_labels, 0)
-            n_acc = (inst_labels[n_mask] == inst_preds[n_mask]).mean()
-            p_acc = (inst_labels[~n_mask] == inst_preds[~n_mask]).mean()
 
             prob[batch_idx] = Y_prob.cpu().numpy()
             labels[batch_idx] = label.item()
@@ -470,10 +458,7 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
         val_inst_loss /= inst_count
         for i in range(2):
             acc, correct, count = inst_logger.get_summary(i)
-            print('Clustering: class {}, acc {}, correct {}/{}'.format(i, acc, correct, count))
-        
-            if writer:
-                writer.add_scalar('val/inst_class_{}_acc'.format(i), acc, epoch)
+            print('class {} clustering acc {}: correct {}/{}'.format(i, acc, correct, count))
     
     if writer:
         writer.add_scalar('val/loss', val_loss, epoch)
@@ -485,6 +470,7 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
+        
         if writer and acc is not None:
             writer.add_scalar('val/class_{}_acc'.format(i), acc, epoch)
      

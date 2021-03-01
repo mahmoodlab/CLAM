@@ -36,6 +36,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 		seed = 7, 
 		print_info = True,
 		label_dict = {},
+		filter_dict = {},
 		ignore=[],
 		patient_strat=False,
 		label_col = None,
@@ -51,7 +52,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 			ignore (list): List containing class labels to ignore
 		"""
 		self.label_dict = label_dict
-		self.num_classes=len(self.label_dict)
+		self.num_classes = len(set(self.label_dict.values()))
 		self.seed = seed
 		self.print_info = print_info
 		self.patient_strat = patient_strat
@@ -62,6 +63,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 		self.label_col = label_col
 
 		slide_data = pd.read_csv(csv_path)
+		slide_data = self.filter_df(slide_data, filter_dict)
 		slide_data = self.df_prep(slide_data, self.label_dict, ignore, self.label_col)
 
 		###shuffle data
@@ -71,35 +73,40 @@ class Generic_WSI_Classification_Dataset(Dataset):
 
 		self.slide_data = slide_data
 
-		patients = np.unique(np.array(slide_data['case_id'])) # get unique patients
-		patient_labels = []
-		
-		for p in patients:
-			locations = slide_data[slide_data['case_id'] == p].index.tolist()
-			assert len(locations) > 0
-			label = slide_data['label'][locations].values
-			if patient_voting == 'max':
-				label = label.max() # get patient label (MIL convention)
-			elif patient_voting == 'maj':
-				label = stats.mode(label)[0]
-			else:
-				pass 
-			patient_labels.append(label)
-		
-		self.patient_data = {'case_id':patients, 'label':np.array(patient_labels)}
+		self.patient_data_prep(patient_voting)
 		self.cls_ids_prep()
 
 		if print_info:
 			self.summarize()
 
 	def cls_ids_prep(self):
+		# store ids corresponding each class at the patient or case level
 		self.patient_cls_ids = [[] for i in range(self.num_classes)]		
 		for i in range(self.num_classes):
 			self.patient_cls_ids[i] = np.where(self.patient_data['label'] == i)[0]
 
+		# store ids corresponding each class at the slide level
 		self.slide_cls_ids = [[] for i in range(self.num_classes)]
 		for i in range(self.num_classes):
 			self.slide_cls_ids[i] = np.where(self.slide_data['label'] == i)[0]
+
+	def patient_data_prep(self, patient_voting='max'):
+		patients = np.unique(np.array(self.slide_data['case_id'])) # get unique patients
+		patient_labels = []
+		
+		for p in patients:
+			locations = self.slide_data[self.slide_data['case_id'] == p].index.tolist()
+			assert len(locations) > 0
+			label = self.slide_data['label'][locations].values
+			if patient_voting == 'max':
+				label = label.max() # get patient label (MIL convention)
+			elif patient_voting == 'maj':
+				label = stats.mode(label)[0]
+			else:
+				raise NotImplementedError
+			patient_labels.append(label)
+		
+		self.patient_data = {'case_id':patients, 'label':np.array(patient_labels)}
 
 	@staticmethod
 	def df_prep(data, label_dict, ignore, label_col):
@@ -114,6 +121,16 @@ class Generic_WSI_Classification_Dataset(Dataset):
 			data.at[i, 'label'] = label_dict[key]
 
 		return data
+
+	def filter_df(self, df, filter_dict={}):
+		if len(filter_dict) > 0:
+			filter_mask = np.full(len(df), True, bool)
+			# assert 'label' not in filter_dict.keys()
+			for key, val in filter_dict.items():
+				mask = df[key].isin(val)
+				filter_mask = np.logical_and(filter_mask, mask)
+			df = df[filter_mask]
+		return df
 
 	def __len__(self):
 		if self.patient_strat:
@@ -175,7 +192,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 
 		if len(split) > 0:
 			mask = self.slide_data['slide_id'].isin(split.tolist())
-			df_slice = self.slide_data[mask].dropna().reset_index(drop=True)
+			df_slice = self.slide_data[mask].reset_index(drop=True)
 			split = Generic_Split(df_slice, data_dir=self.data_dir, num_classes=self.num_classes)
 		else:
 			split = None
@@ -191,7 +208,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 
 		if len(split) > 0:
 			mask = self.slide_data['slide_id'].isin(merged_split)
-			df_slice = self.slide_data[mask].dropna().reset_index(drop=True)
+			df_slice = self.slide_data[mask].reset_index(drop=True)
 			split = Generic_Split(df_slice, data_dir=self.data_dir, num_classes=self.num_classes)
 		else:
 			split = None
@@ -311,10 +328,15 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 	def __getitem__(self, idx):
 		slide_id = self.slide_data['slide_id'][idx]
 		label = self.slide_data['label'][idx]
+		if type(self.data_dir) == dict:
+			source = self.slide_data['source'][idx]
+			data_dir = self.data_dir[source]
+		else:
+			data_dir = self.data_dir
 
 		if not self.use_h5:
 			if self.data_dir:
-				full_path = os.path.join(self.data_dir,'{}.pt'.format(slide_id))
+				full_path = os.path.join(data_dir, 'pt_files', '{}.pt'.format(slide_id))
 				features = torch.load(full_path)
 				return features, label
 			
@@ -322,7 +344,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 				return slide_id, label
 
 		else:
-			full_path = os.path.join(self.data_dir,'{}.h5'.format(slide_id))
+			full_path = os.path.join(data_dir,'h5_files','{}.h5'.format(slide_id))
 			with h5py.File(full_path,'r') as hdf5_file:
 				features = hdf5_file['features'][:]
 				coords = hdf5_file['coords'][:]

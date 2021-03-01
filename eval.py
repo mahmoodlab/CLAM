@@ -41,12 +41,10 @@ parser.add_argument('--fold', type=int, default=-1, help='single fold to evaluat
 parser.add_argument('--micro_average', action='store_true', default=False, 
                     help='use micro_average instead of macro_avearge for multiclass AUC')
 parser.add_argument('--split', type=str, choices=['train', 'val', 'test', 'all'], default='test')
-parser.add_argument('--task', type=str, choices=['camelyon_40x_cv', 'tcga_kidney_cv'])
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping'])
 args = parser.parse_args()
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-encoding_size = 1024
 
 args.save_dir = os.path.join('./eval_results', 'EVAL_' + str(args.save_exp_code))
 args.models_dir = os.path.join(args.results_dir, str(args.models_exp_code))
@@ -72,25 +70,35 @@ with open(args.save_dir + '/eval_experiment_{}.txt'.format(args.save_exp_code), 
 f.close()
 
 print(settings)
-if args.task == 'camelyon_40x_cv':
+if args.task == 'task_1_tumor_vs_normal':
     args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/camelyon_clean.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'camelyon_40x_resnet_features'),
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tumor_vs_normal_dummy_clean.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'tumor_vs_normal_resnet_features'),
                             shuffle = False, 
                             print_info = True,
                             label_dict = {'normal_tissue':0, 'tumor_tissue':1},
                             patient_strat=False,
                             ignore=[])
 
-elif args.task == 'tcga_kidney_cv':
+elif args.task == 'task_2_tumor_subtyping':
     args.n_classes=3
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_kidney_clean.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'tcga_kidney_resnet_features'),
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tumor_subtyping_dummy_clean.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'tumor_subtyping_resnet_features'),
                             shuffle = False, 
                             print_info = True,
-                            label_dict = {'TCGA-KICH':0, 'TCGA-KIRC':1, 'TCGA-KIRP':2},
+                            label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
                             patient_strat= False,
-                            ignore=['TCGA-SARC'])
+                            ignore=[])
+
+# elif args.task == 'tcga_kidney_cv':
+#     args.n_classes=3
+#     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_kidney_clean.csv',
+#                             data_dir= os.path.join(args.data_root_dir, 'tcga_kidney_20x_features'),
+#                             shuffle = False, 
+#                             print_info = True,
+#                             label_dict = {'TCGA-KICH':0, 'TCGA-KIRC':1, 'TCGA-KIRP':2},
+#                             patient_strat= False,
+#                             ignore=['TCGA-SARC'])
 
 else:
     raise NotImplementedError

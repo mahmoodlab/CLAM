@@ -21,11 +21,7 @@ class MIL_fc(nn.Module):
 
     def relocate(self):
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if torch.cuda.device_count() > 1:
-            device_ids = list(range(torch.cuda.device_count()))
-            self.classifier = nn.DataParallel(self.classifier, device_ids=device_ids).to('cuda:0')
-        else:
-            self.classifier.to(device)
+        self.classifier.to(device)
 
     def forward(self, h, return_features=False):
         if return_features:
@@ -66,13 +62,8 @@ class MIL_fc_mc(nn.Module):
 
     def relocate(self):
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if torch.cuda.device_count() > 1:
-            device_ids = list(range(torch.cuda.device_count()))
-            self.fc = nn.DataParallel(self.fc, device_ids=device_ids).to('cuda:0')
-            self.classifiers = nn.DataParallel(self.classifiers, device_ids=device_ids).to('cuda:0')
-        else:
-            self.fc = self.fc.to(device)
-            self.classifiers = self.classifiers.to(device)
+        self.fc = self.fc.to(device)
+        self.classifiers = self.classifiers.to(device)
     
     def forward(self, h, return_features=False):
         device = h.device

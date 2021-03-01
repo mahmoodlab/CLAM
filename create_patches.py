@@ -1,6 +1,7 @@
 # internal imports
-from wsi_core.WholeSlideImage import WholeSlideImage, StitchPatches
-
+from wsi_core.WholeSlideImage import WholeSlideImage 
+from wsi_core.wsi_utils import StitchPatches
+from wsi_core.batch_process_utils import initialize_df
 # other imports
 import os
 import numpy as np
@@ -38,40 +39,12 @@ def patching(WSI_object, **kwargs):
 	patch_time_elapsed = time.time() - start_time
 	return file_path, patch_time_elapsed
 
-def initialize_df(slides, seg_params, filter_params, vis_params, patch_params):
-	total = len(slides)
-	df = pd.DataFrame({'slide_id': slides, 'process': np.full((total), 1, dtype=np.uint8), 
-		'status': np.full((total), 'tbp'),
-		
-		# seg params
-		'seg_level': np.full((total), int(seg_params['seg_level']), dtype=np.int8),
-		'sthresh': np.full((total), int(seg_params['sthresh']), dtype=np.uint8),
-		'mthresh': np.full((total), int(seg_params['mthresh']), dtype=np.uint8),
-		'close': np.full((total), int(seg_params['close']), dtype=np.uint32),
-		'use_otsu': np.full((total), bool(seg_params['use_otsu']), dtype=bool),
-		
-		# filter params
-		'a_t': np.full((total), int(filter_params['a_t']), dtype=np.uint32),
-		'a_h': np.full((total), int(filter_params['a_h']), dtype=np.uint32),
-		'max_n_holes': np.full((total), int(filter_params['max_n_holes']), dtype=np.uint32),
-
-		# vis params
-		'vis_level': np.full((total), int(vis_params['vis_level']), dtype=np.int8),
-		'line_thickness': np.full((total), int(vis_params['line_thickness']), dtype=np.uint32),
-
-		# patching params
-		'white_thresh': np.full((total), int(patch_params['white_thresh']), dtype=np.uint8),
-		'black_thresh': np.full((total), int(patch_params['black_thresh']), dtype=np.uint8),
-		'use_padding': np.full((total), bool(patch_params['use_padding']), dtype=bool),
-		'contour_fn': np.full((total), patch_params['contour_fn'])
-		})
-	return df
-
 def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_dir, 
 				  patch_size = 256, step_size = 256, custom_downsample=1, 
-				  seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False},
-				  filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':10}, 
-				  vis_params = {'vis_level': -1, 'line_thickness': 500},
+				  seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False,
+				  'keep_ids': 'none', 'exclude_ids': 'none'},
+				  filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8 }, 
+				  vis_params = {'vis_level': -1, 'line_thickness': 250},
 				  patch_params = {'white_thresh': 5, 'black_thresh': 40, 'use_padding': True, 'contour_fn': 'four_pt'},
 				  patch_level = 0,
 				  use_default_params = False, 
@@ -83,11 +56,14 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
 	slides = sorted(os.listdir(source))
 	slides = [slide for slide in slides if os.path.isfile(os.path.join(source, slide))]
+
 	if process_list is None:
-		df = initialize_df(slides, seg_params, filter_params, vis_params, patch_params)
+		df = initialize_df(slides, seg_params, filter_params, vis_params, patch_params, save_patches=True)
 	
 	else:
 		df = pd.read_csv(process_list)
+		df = initialize_df(df, seg_params, filter_params, vis_params, patch_params, save_patches=True)
+
 
 	mask = df['process'] == 1
 	process_stack = df[mask]
@@ -156,6 +132,20 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 				wsi = WSI_object.getOpenSlide()
 				best_level = wsi.get_best_level_for_downsample(64)
 				current_seg_params['seg_level'] = best_level
+
+		keep_ids = str(current_seg_params['keep_ids'])
+		if keep_ids != 'none' and len(keep_ids) > 0:
+			str_ids = current_seg_params['keep_ids']
+			current_seg_params['keep_ids'] = np.array(str_ids.split(',')).astype(int)
+		else:
+			current_seg_params['keep_ids'] = []
+
+		exclude_ids = str(current_seg_params['exclude_ids'])
+		if exclude_ids != 'none' and len(exclude_ids) > 0:
+			str_ids = current_seg_params['exclude_ids']
+			current_seg_params['exclude_ids'] = np.array(str_ids.split(',')).astype(int)
+		else:
+			current_seg_params['exclude_ids'] = []
 
 		w, h = WSI_object.level_dim[current_seg_params['seg_level']] 
 		if w * h > 1e8:
@@ -260,8 +250,10 @@ if __name__ == '__main__':
 		if key not in ['source']:
 			os.makedirs(val, exist_ok=True)
 
-	seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False}
-	filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8}
+
+	seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False,
+				  'keep_ids': 'none', 'exclude_ids': 'none'}
+	filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8 }
 	vis_params = {'vis_level': -1, 'line_thickness': 250}
 	patch_params = {'white_thresh': 5, 'black_thresh': 40, 'use_padding': True, 'contour_fn': 'four_pt'}
 

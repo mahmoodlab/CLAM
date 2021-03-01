@@ -30,14 +30,14 @@ parser.add_argument('--white_thresh', type=int, default=5,
 parser.add_argument('--black_thresh', type=int, default=50, 
 					help='mean rgb threshold for whether to consider a patch as black for exclusion')
 parser.add_argument('--no_padding', action='store_false', default=True)
-parser.add_argument('--contour_fn', type=str, choices=['four_pt', 'center', 'basic'], default='four_pt',
+parser.add_argument('--contour_fn', type=str, choices=['four_pt', 'center', 'basic', 'four_pt_hard'], default='four_pt',
 					help='contour checking function')
 
 
 if __name__ == '__main__':
 	args = parser.parse_args()
 	seg_params = {'seg_level': args.seg_level, 'sthresh': args.sthresh, 'mthresh': args.mthresh, 
-				  'close': args.close, 'use_otsu': args.use_otsu}
+				  'close': args.close, 'use_otsu': args.use_otsu, 'keep_ids': 'none', 'exclude_ids': 'none'}
 	filter_params = {'a_t':args.a_t, 'a_h': args.a_h, 'max_n_holes': args.max_n_holes}
 	vis_params = {'vis_level': args.vis_level, 'line_thickness': args.line_thickness}
 	patch_params = {'white_thresh': args.white_thresh, 'black_thresh': args.black_thresh, 
