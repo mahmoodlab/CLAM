@@ -518,11 +518,11 @@ class WholeSlideImage(object):
             cmap (str): name of matplotlib colormap to use
         """
 
-        downsample = self.level_downsamples[vis_level]
-        scale = [1/downsample[0], 1/downsample[1]] # Scaling from 0 to desired level
-        
         if vis_level < 0:
             vis_level = self.wsi.get_best_level_for_downsample(32)
+
+        downsample = self.level_downsamples[vis_level]
+        scale = [1/downsample[0], 1/downsample[1]] # Scaling from 0 to desired level
                 
         if len(scores.shape) == 2:
             scores = scores.flatten()
