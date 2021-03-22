@@ -285,9 +285,9 @@ Visulize additional examples here: http://clam.mahmoodlab.org
 If you find our work useful in your research or if you use parts of this code please consider citing our [paper](https://arxiv.org/abs/2004.09666):
 ```
 @inproceedings{lu2020clam,
-  title     = {Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Images},
+  title     = {Data-efficient and weakly supervised computational pathology on whole-slide images},
   author    = {Ming Y. Lu, Drew F. K. Williamson, Tiffany Y. Chen, Richard J. Chen, Matteo Barbieri, Faisal Mahmood},
-  booktitle = {Nature Biomedical Engineering - In Press},
-  year = {2020}
+  booktitle = {Nature Biomedical Engineering},
+  year = {2021}
 }
 ```
