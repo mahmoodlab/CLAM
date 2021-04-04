@@ -100,7 +100,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
 		# Inialize WSI
 		full_path = os.path.join(source, slide)
-		WSI_object = WholeSlideImage(full_path, hdf5_file=None)
+		WSI_object = WholeSlideImage(full_path)
 
 		if use_default_params:
 			current_vis_params = vis_params.copy()
