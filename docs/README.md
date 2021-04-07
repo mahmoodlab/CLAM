@@ -279,7 +279,10 @@ Visulize additional examples here: http://clam.mahmoodlab.org
 - Please report all issues on the public forum.
 
 ## License
-© [Mahmood Lab](http://www.mahmoodlab.org) - This code is made available under the GPLv3 License and is available for non-commercial academic purposes. 
+© [Mahmood Lab](http://www.mahmoodlab.org) - This code is made available under the GPLv3 License and is available for non-commercial academic purposes.
+
+## Funding
+This work was funded by NIH NIGMS [R35GM138216](https://reporter.nih.gov/search/sWDcU5IfAUCabqoThQ26GQ/project-details/10029418).
 
 ## Reference
 If you find our work useful in your research or if you use parts of this code please consider citing our [paper](https://arxiv.org/abs/2004.09666):
