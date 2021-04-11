@@ -20,26 +20,6 @@ parser.add_argument('--test_frac', type=float, default= 0.1,
 
 args = parser.parse_args()
 
-# if args.task == 'tcga_kidney':
-#     dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/tcga_kidney_clean.csv',
-#                             shuffle = False, 
-#                             seed = args.seed, 
-#                             print_info = True,
-#                             label_dict = {'TCGA-KICH':0, 'TCGA-KIRC':1, 'TCGA-KIRP':2},
-#                             label_col = 'label',
-#                             patient_strat= True,
-#                             patient_voting='maj',
-#                             ignore=[])
-
-# elif args.task == 'camelyon_40x_cv':
-#     dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/camelyon_clean.csv',
-#                             shuffle = False, 
-#                             seed = args.seed, 
-#                             print_info = True,
-#                             label_dict = {'normal_tissue':0, 'tumor_tissue':1},
-#                             patient_strat= True,
-#                             ignore=[])
-
 if args.task == 'task_1_tumor_vs_normal':
     args.n_classes=2
     dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/tumor_vs_normal_dummy_clean.csv',
