@@ -16,7 +16,7 @@ Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Imag
 © [Mahmood Lab](http://www.mahmoodlab.org) - This code is made available under the GPLv3 License and is available for non-commercial academic purposes. 
 
 ## Known Issues to be Aware of:
-Note that CLAM uses openslide, which relies on the pixman library, and pixman version 0.38 has a known glitch that causes .svs files to be read incorrectly. See [here](https://github.com/mahmoodlab/CLAM/issues/13) for examples, discussion and possible workarounds. 
+Note that CLAM uses openslide, which relies on the pixman library, and pixman version 0.38 has a known glitch that causes .svs files to be read incorrectly. See [here](https://github.com/mahmoodlab/CLAM/issues/13) for examples, discussion and possible workarounds (the exact solution might differ depending on how your conda environment is setup).  
 
 ## Updates:
 03/01/2021: New, fast patching/feature extraction pipeline is now available. **TL;DR:** since CLAM only requires image features for training, it is not necessary to save the actual image patches, the new pipeline rids of this overhead and instead only saves the coordinates of image patches during "patching" and loads these regions on the fly from WSIs during feature extraction. This is significantly faster than the old pipeline and usually only takes 1-2s for "patching" and a couple minutes to featurize a WSI. To use the new pipeline, make sure you are calling **create_patches_fp.py** and **extract_features_fp.py** instead of the old **create_patches.py** and **extract_features.py** scripts.
