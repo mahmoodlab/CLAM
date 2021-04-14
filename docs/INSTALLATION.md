@@ -32,4 +32,8 @@ conda deactivate clam
 ```
 Please report any issues in the public forum.
 
+## Using .svs files:
+Note that CLAM uses openslide, which relies on the pixman library, and pixman version 0.38 has a known glitch that causes certain downsamples of some .svs files to be read incorrectly. See [here](https://github.com/mahmoodlab/CLAM/issues/13) for examples, discussion and possible workarounds (the exact solution might differ depending on how your conda environment is setup).  
+
+
 [Return to main page.](README.md)
