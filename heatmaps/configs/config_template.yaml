@@ -1,0 +1,78 @@
+# CUDA_VISIBLE_DEVICES=0,1 python create_heatmaps.py --config config_template.yaml
+--- 
+exp_arguments:
+  # number of classes
+  n_classes: 2
+  # name tag for saving generated figures and assets
+  save_exp_code: HEATMAP_OUTPUT 
+  # where to save raw asset files
+  raw_save_dir: heatmaps/heatmap_raw_results
+  # where to save final heatmaps
+  production_save_dir: heatmaps/heatmap_production_results
+  batch_size: 384
+data_arguments: 
+  # where is data stored; can be a single str path or a dictionary of key, data_dir mapping
+  data_dir: heatmaps/demo/slides/
+  # column name for key in data_dir (if a dict mapping is used)
+  data_dir_key: source
+  # csv list containing slide_ids (can additionally have seg/patch paramters, class labels, etc.)
+  process_list: heatmap_demo_dataset.csv
+  # preset file for segmentation/patching
+  preset: presets/bwh_biopsy.csv
+  # file extention for slides
+  slide_ext: .svs
+  # label dictionary for str: interger mapping (optional)
+  label_dict:
+    LUAD: 0
+    LSCC: 1                        
+patching_arguments:
+  # arguments for patching
+  patch_size: 256
+  overlap: 0.5
+  patch_level: 0
+  custom_downsample: 1
+model_arguments: 
+  # arguments for initializing model from checkpoint
+  ckpt_path: heatmaps/demo/ckpts/s_0_checkpoint.pt
+  model_type: clam_sb # see utils/eval_utils/
+  initiate_fn: initiate_model # see utils/eval_utils/
+  model_size: small
+  drop_out: true
+heatmap_arguments:
+  # downsample at which to visualize heatmap (-1 refers to downsample closest to 32x downsample)
+  vis_level: 1
+  # transparency for overlaying heatmap on background (0: background only, 1: foreground only)
+  alpha: 0.4
+  # whether to use a blank canvas instead of original slide
+  blank_canvas: false
+  # whether to also save the original H&E image
+  save_orig: true
+  # file extension for saving heatmap/original image
+  save_ext: jpg
+  # whether to calculate percentile scores in reference to the set of non-overlapping patches
+  use_ref_scores: true
+  # whether to use gaussian blur for further smoothing
+  blur: false
+  # whether to shift the 4 default corner points for checking if a patch is inside a foreground contour
+  use_center_shift: true
+  # whether to only compute heatmap for ROI specified by x1, x2, y1, y2
+  use_roi: false 
+  # whether to calculate heatmap with specified overlap (by default, coarse heatmap without overlap is always calculated)
+  calc_heatmap: true
+  # whether to binarize attention scores
+  binarize: false
+  # binarization threshold: (0, 1)
+  binary_thresh: -1
+  # factor for downscaling the heatmap before final dispaly
+  custom_downsample: 1
+  cmap: jet
+sample_arguments:
+  samples:
+    - name: "topk_high_attention"
+      sample: true
+      seed: 1
+      k: 15 # save top-k patches
+      mode: topk
+
+
+

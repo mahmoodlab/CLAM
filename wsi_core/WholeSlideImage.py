@@ -491,7 +491,7 @@ class WholeSlideImage(object):
                    segment=True, use_holes=True,
                    convert_to_percentiles=False, 
                    binarize=False, thresh=0.5,
-                   annot_color=(250, 218, 94), max_size=None,
+                   max_size=None,
                    custom_downsample = 1,
                    cmap='coolwarm'):
 
@@ -512,7 +512,6 @@ class WholeSlideImage(object):
             convert_to_percentiles (bool): whether to convert attention scores to percentiles
             binarize (bool): only display patches > threshold
             threshold (float): binarization threshold
-            annot_color (tuple of uint8): Annotation color
             max_size (int): Maximum canvas size (clip if goes over)
             custom_downsample (int): additionally downscale the heatmap by specified factor
             cmap (str): name of matplotlib colormap to use
@@ -600,6 +599,8 @@ class WholeSlideImage(object):
         else:
             overlay[~zero_mask] = overlay[~zero_mask] / counter[~zero_mask]
         del counter 
+        if blur:
+            overlay = cv2.GaussianBlur(overlay,tuple((patch_size * (1-overlap)).astype(int) * 2 +1),0)  
 
         if segment:
             tissue_mask = self.get_seg_mask(region_size, scale, use_holes=use_holes, offset=tuple(top_left))

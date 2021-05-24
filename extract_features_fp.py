@@ -11,30 +11,11 @@ from torch.utils.data import DataLoader
 from models.resnet_custom import resnet50_baseline
 import argparse
 from utils.utils import print_network, collate_features
+from utils.file_utils import save_hdf5
 from PIL import Image
 import h5py
 import openslide
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-
-def save_hdf5(output_path, asset_dict, mode='a'):
-	file = h5py.File(output_path, mode)
-
-	for key, val in asset_dict.items():
-		data_shape = val.shape
-		if key not in file:
-			data_type = val.dtype
-			chunk_shape = (1, ) + data_shape[1:]
-			maxshape = (None, ) + data_shape[1:]
-			dset = file.create_dataset(key, shape=data_shape, maxshape=maxshape, chunks=chunk_shape, dtype=data_type)
-			dset[:] = val
-		else:
-			dset = file[key]
-			dset.resize(len(dset) + data_shape[0], axis=0)
-			dset[-data_shape[0]:] = val  
-
-	file.close()
-	return output_path
-
 
 def compute_w_loader(file_path, output_path, wsi, model,
  	batch_size = 8, verbose = 0, print_every=20, pretrained=True, 
@@ -72,7 +53,7 @@ def compute_w_loader(file_path, output_path, wsi, model,
 			features = features.cpu().numpy()
 
 			asset_dict = {'features': features, 'coords': coords}
-			save_hdf5(output_path, asset_dict, mode=mode)
+			save_hdf5(output_path, asset_dict, attr_dict= None, mode=mode)
 			mode = 'a'
 	
 	return output_path

@@ -99,8 +99,9 @@ def initialize_hdf5_bag(first_patch, save_coord=False):
     file.close()
     return file_path
 
-def sample_indices(scores, k, start=0.48, end=0.52, percentile=False):
-    if percentile:
+def sample_indices(scores, k, start=0.48, end=0.52, convert_to_percentile=False, seed=1):
+    np.random.seed(seed)
+    if convert_to_percentile:
         end_value = np.quantile(scores, end)
         start_value = np.quantile(scores, start)
     else:
@@ -113,10 +114,12 @@ def sample_indices(scores, k, start=0.48, end=0.52, percentile=False):
     else:
         return np.random.choice(indices, min(k, len(indices)), replace=False)
 
-# def to_percentiles(scores):
-#     from scipy.stats import percentileofscore
-#     percentiles = [percentileofscore(scores, i) for i in scores]
-#     return np.array(percentiles)
+def top_k(scores, k, invert=False):
+    if invert:
+        top_k_ids=scores.argsort()[:k]
+    else:
+        top_k_ids=scores.argsort()[::-1][:k]
+    return top_k_ids
 
 def to_percentiles(scores):
     from scipy.stats import rankdata
@@ -131,7 +134,7 @@ def screen_coords(scores, coords, top_left, bot_right):
     coords = coords[mask]
     return scores, coords
 
-def sample_rois(scores, coords, k=5, score_start=45, score_end=55, top_left=None, bot_right=None):
+def sample_rois(scores, coords, k=5, mode='range_sample', seed=1, score_start=0.45, score_end=0.55, top_left=None, bot_right=None):
 
     if len(scores.shape) == 2:
         scores = scores.flatten()
@@ -140,11 +143,18 @@ def sample_rois(scores, coords, k=5, score_start=45, score_end=55, top_left=None
     if top_left is not None and bot_right is not None:
         scores, coords = screen_coords(scores, coords, top_left, bot_right)
 
-    sampled_ids = sample_indices(scores, start=start, end=end, k=k, percentile=False)
+    if mode == 'range_sample':
+        sampled_ids = sample_indices(scores, start=score_start, end=score_end, k=k, convert_to_percentile=False, seed=seed)
+    elif mode == 'topk':
+        sampled_ids = top_k(scores, k, invert=False)
+    elif mode == 'reverse_topk':
+        sampled_ids = top_k(scores, k, invert=True)
+    else:
+        raise NotImplementedError
     coords = coords[sampled_ids]
     scores = scores[sampled_ids]
 
-    asset = {'sampled_coords': coords, 'sampled_scores': sampled_scores}
+    asset = {'sampled_coords': coords, 'sampled_scores': scores}
     return asset
 
 def DrawGrid(img, coord, shape, thickness=2, color=(0,0,0,255)):
