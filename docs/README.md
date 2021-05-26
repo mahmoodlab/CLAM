@@ -71,14 +71,14 @@ The **stitches** folder contains downsampled visualizations of stitched tissue p
 The auto-generated csv file **process_list_autogen.csv** contains a list of all slides processed, along with their segmentation/patching parameters used.
 
 Additional flags that can be passed include:
-* --custom_downsample: factor for custom downscale (not recommended, ideally should first check if native downsamples exist)
-* --patch_level: which downsample pyramid level to extract patches from (default is 0, the highest available resolution)
-* --no_auto_skip: by default, the script will skip over files for which patched .h5 files already exist in the desination folder, this toggle can be used to override this behavior
+* `--custom_downsample`: factor for custom downscale (not recommended, ideally should first check if native downsamples exist)
+* `--patch_level`: which downsample pyramid level to extract patches from (default is 0, the highest available resolution)
+* `--no_auto_skip`: by default, the script will skip over files for which patched .h5 files already exist in the desination folder, this toggle can be used to override this behavior
 
 Some parameter templates are also availble and can be readily deployed as good choices for default parameters:
-* bwh_biopsy.csv: used for segmenting biopsy slides scanned at BWH (Scanned using Hamamatsu S210 and Aperio GT450) 
-* bwh_resection.csv: used for segmenting resection slides scanned at BWH
-* tcga.csv: used for segmenting TCGA slides
+* `bwh_biopsy.csv`: used for segmenting biopsy slides scanned at BWH (Scanned using Hamamatsu S210 and Aperio GT450) 
+* `bwh_resection.csv`: used for segmenting resection slides scanned at BWH
+* `tcga.csv`: used for segmenting TCGA slides
 
 Simply pass the name of the template file to the --preset argument, for example, to use the biopsy template:
 ``` shell
@@ -88,24 +88,24 @@ python create_patches_fp.py --source DATA_DIRECTORY --save_dir RESULTS_DIRECTORY
 For advanced usage, in addition to using the default, single set of parameters defined in the script **create_patches_fp.py**, the user can define custom templates of parameters depending on the dataset. These templates are expected to be stored under **presets**, and contain values for each of the parameters used during segmentation and patching. 
 
 The list of segmentation parameters is as follows:
-* seg_level: downsample level on which to segment the WSI (default: -1, which uses the downsample in the WSI closest to 64x downsample)
-* sthresh: segmentation threshold (positive integer, default: 8, using a higher threshold leads to less foreground and more background detection)
-* mthresh: median filter size (positive, odd integer, default: 7)
-* use_otsu: use otsu's method instead of simple binary thresholding (default: False) 
-* close: additional morphological closing to apply following initial thresholding (positive integer or -1, default: 4)
+* `seg_level`: downsample level on which to segment the WSI (default: -1, which uses the downsample in the WSI closest to 64x downsample)
+* `sthresh`: segmentation threshold (positive integer, default: 8, using a higher threshold leads to less foreground and more background detection)
+* `mthresh`: median filter size (positive, odd integer, default: 7)
+* `use_otsu`: use otsu's method instead of simple binary thresholding (default: False) 
+* `close`: additional morphological closing to apply following initial thresholding (positive integer or -1, default: 4)
 
 The list of contour filtering parameters is as follows:
-* a_t: area filter threshold for tissue (positive integer, the minimum size of detected foreground contours to consider, relative to a reference patch size of 512 x 512 at level 0, e.g. a value 10 means only detected foreground contours of size greater than 10 512 x 512 sized patches at level 0 will be processed, default: 100)
-* a_h: area filter threshold for holes (positive integer, the minimum size of detected holes/cavities in foreground contours to avoid, once again relative to 512 x 512 sized patches at level 0, default: 16)
-* max_n_holes: maximum of holes to consider per detected foreground contours (positive integer, default: 10, higher maximum leads to more accurate patching but increases computational cost)
+* `a_t`: area filter threshold for tissue (positive integer, the minimum size of detected foreground contours to consider, relative to a reference patch size of 512 x 512 at level 0, e.g. a value 10 means only detected foreground contours of size greater than 10 512 x 512 sized patches at level 0 will be processed, default: 100)
+* `a_h`: area filter threshold for holes (positive integer, the minimum size of detected holes/cavities in foreground contours to avoid, once again relative to 512 x 512 sized patches at level 0, default: 16)
+* `max_n_holes`: maximum of holes to consider per detected foreground contours (positive integer, default: 10, higher maximum leads to more accurate patching but increases computational cost)
 
 The list of segmentation visualization parameters is as follows:
-* vis_level: downsample level to visualize the segmentation results (default: -1, which uses the downsample in the WSI closest to 64x downsample)
-* line_thickness: line thickness to draw visualize the segmentation results (positive integer, in terms of number of pixels occupied by drawn line at level 0, default: 250)
+* `vis_level`: downsample level to visualize the segmentation results (default: -1, which uses the downsample in the WSI closest to 64x downsample)
+* `line_thickness`: line thickness to draw visualize the segmentation results (positive integer, in terms of number of pixels occupied by drawn line at level 0, default: 250)
 
 The list of patching parameters is as follows:
-* use_padding: whether to pad the border of the slide (default: True)
-* contour_fn: contour checking function to decide whether a patch should be considered foreground or background (choices between 'four_pt' - checks if all four points in a small, grid around the center of the patch are inside the contour, 'center' - checks if the center of the patch is inside the contour, 'basic' - checks if the top-left corner of the patch is inside the contour, default: 'four_pt')
+* `use_padding`: whether to pad the border of the slide (default: True)
+* `contour_fn`: contour checking function to decide whether a patch should be considered foreground or background (choices between 'four_pt' - checks if all four points in a small, grid around the center of the patch are inside the contour, 'center' - checks if the center of the patch is inside the contour, 'basic' - checks if the top-left corner of the patch is inside the contour, default: 'four_pt')
 
 
 ### Two-Step Run (Mannually Adjust Parameters For Specific Slides)
