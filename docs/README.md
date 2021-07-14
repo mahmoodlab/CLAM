@@ -172,7 +172,7 @@ DATA_ROOT_DIR/
                 ├── slide_a.pt
                 ├── slide_b.pt
                 └── ...
-    └──DATASET_2_DATA_DIR/
+    └──DATASET_3_DATA_DIR/
         ├── h5_files
                 ├── slide_i.h5
                 ├── slide_ii.h5
