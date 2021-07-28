@@ -137,7 +137,7 @@ if __name__ == '__main__':
 
 
 	if data_args.process_list is None:
-		if isintance(data_args.data_dir, list):
+		if isinstance(data_args.data_dir, list):
 			slides = []
 			for data_dir in data_args.data_dir:
 				slides.extend(os.listdir(data_dir))
