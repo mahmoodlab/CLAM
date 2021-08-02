@@ -113,7 +113,7 @@ def train(datasets, cur, args):
 
     print('\nInit loss function...', end=' ')
     if args.bag_loss == 'svm':
-        from topk import SmoothTop1SVM
+        from topk.svm import SmoothTop1SVM
         loss_fn = SmoothTop1SVM(n_classes = args.n_classes)
         if device.type == 'cuda':
             loss_fn = loss_fn.cuda()
