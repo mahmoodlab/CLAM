@@ -216,8 +216,7 @@ def train(datasets, cur, args):
         writer.add_scalar('final/val_auc', val_auc, 0)
         writer.add_scalar('final/test_error', test_error, 0)
         writer.add_scalar('final/test_auc', test_auc, 0)
-    
-    writer.close()
+        writer.close()
     return results_dict, test_auc, val_auc, 1-test_error, 1-val_error 
 
 
