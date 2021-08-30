@@ -46,10 +46,8 @@ def compute_w_loader(file_path, output_path, wsi, model,
 			if count % print_every == 0:
 				print('batch {}/{}, {} files processed'.format(count, len(loader), count * batch_size))
 			batch = batch.to(device, non_blocking=True)
-			mini_bs = coords.shape[0]
 			
 			features = model(batch)
-			
 			features = features.cpu().numpy()
 
 			asset_dict = {'features': features, 'coords': coords}
