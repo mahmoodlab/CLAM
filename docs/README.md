@@ -295,12 +295,19 @@ Visulize additional examples here: http://clam.mahmoodlab.org
 This work was funded by NIH NIGMS [R35GM138216](https://reporter.nih.gov/search/sWDcU5IfAUCabqoThQ26GQ/project-details/10029418).
 
 ## Reference
-If you find our work useful in your research or if you use parts of this code please consider citing our [paper](https://arxiv.org/abs/2004.09666):
+If you find our work useful in your research or if you use parts of this code please consider citing our [paper](https://www.nature.com/articles/s41551-020-00682-w):
+
+Lu, M.Y., Williamson, D.F.K., Chen, T.Y. et al. Data-efficient and weakly supervised computational pathology on whole-slide images. Nat Biomed Eng 5, 555–570 (2021). https://doi.org/10.1038/s41551-020-00682-w
+
 ```
-@inproceedings{lu2020clam,
-  title     = {Data-efficient and weakly supervised computational pathology on whole-slide images},
-  author    = {Ming Y. Lu, Drew F. K. Williamson, Tiffany Y. Chen, Richard J. Chen, Matteo Barbieri, Faisal Mahmood},
-  booktitle = {Nature Biomedical Engineering},
-  year = {2021}
+@article{lu2021data,
+  title={Data-efficient and weakly supervised computational pathology on whole-slide images},
+  author={Lu, Ming Y and Williamson, Drew FK and Chen, Tiffany Y and Chen, Richard J and Barbieri, Matteo and Mahmood, Faisal},
+  journal={Nature Biomedical Engineering},
+  volume={5},
+  number={6},
+  pages={555--570},
+  year={2021},
+  publisher={Nature Publishing Group}
 }
 ```
