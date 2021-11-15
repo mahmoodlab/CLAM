@@ -4,47 +4,50 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from models.model_mil import MIL_fc, MIL_fc_mc
-from models.model_clam import CLAM
+from models.model_clam import CLAM_SB, CLAM_MB
 import pdb
 import os
 import pandas as pd
 from utils.utils import *
-from utils.core_utils import EarlyStopping,  Accuracy_Logger
-from utils.file_utils import save_pkl, load_pkl
-from PIL import Image
-from math import floor
+from utils.core_utils import Accuracy_Logger
 from sklearn.metrics import roc_auc_score, roc_curve, auc
-from PIL import ImageFilter
+from sklearn.preprocessing import label_binarize
 import matplotlib.pyplot as plt
-from datasets.dataset_generic import Generic_WSI_Classification_Dataset, Generic_MIL_Dataset, save_splits
-import h5py
-from models.resnet_custom import resnet50_baseline
-from wsi_core.WholeSlideImage import WholeSlideImage
-from scipy.stats import percentileofscore
-import math
+# from train_customed_models import get_dataset_loader, collate_MIL
 
 def initiate_model(args, ckpt_path):
     print('Init Model')    
     model_dict = {"dropout": args.drop_out, 'n_classes': args.n_classes}
     
-    if args.model_size is not None:
+    if args.model_size is not None and args.model_type in ['clam_sb', 'clam_mb']:
         model_dict.update({"size_arg": args.model_size})
-    
-    if args.model_type =='clam':
-        model = CLAM(**model_dict)
         
+    print(model_dict)
+    
+    if args.model_type =='clam_sb':
+        model = CLAM_SB(**model_dict)
+    elif args.model_type =='clam_mb':
+        model = CLAM_MB(**model_dict)
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
             model = MIL_fc_mc(**model_dict)
         else:
             model = MIL_fc(**model_dict)
 
-    model.relocate()
     print_network(model)
 
-    ckpt = torch.load(ckpt_path)
-    model.load_state_dict(ckpt, strict=False)
+    # ckpt = torch.load(ckpt_path)
+    # model.load_state_dict(ckpt, strict=False)
 
+    ckpt = torch.load(ckpt_path)
+    ckpt_clean = {}
+    for key in ckpt.keys():
+        if 'instance_loss_fn' in key:
+            continue
+        ckpt_clean.update({key.replace('.module', ''):ckpt[key]})
+    model.load_state_dict(ckpt_clean, strict=True)
+
+    model.relocate()
     model.eval()
     return model
 
@@ -89,23 +92,31 @@ def summary(model, loader, args):
         error = calculate_error(Y_hat, label)
         test_error += error
 
-    del data
+        del data
     test_error /= len(loader)
 
+    aucs = []
     if len(np.unique(all_labels)) == 1:
         auc_score = -1
-    else:
+
+    else: 
         if args.n_classes == 2:
             auc_score = roc_auc_score(all_labels, all_probs[:, 1])
 
         else:
+            binary_labels = label_binarize(all_labels, classes=[i for i in range(args.n_classes)])
+            for class_idx in range(args.n_classes):
+                if class_idx in all_labels:
+                    fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], all_probs[:, class_idx])
+                    aucs.append(auc(fpr, tpr))
+                else:
+                    aucs.append(float('nan'))
             if args.micro_average:
-                from sklearn.preprocessing import label_binarize
                 binary_labels = label_binarize(all_labels, classes=[i for i in range(args.n_classes)])
                 fpr, tpr, _ = roc_curve(binary_labels.ravel(), all_probs.ravel())
                 auc_score = auc(fpr, tpr)
             else:
-                auc_score = roc_auc_score(all_labels, all_probs, multi_class='ovr')
+                auc_score = np.nanmean(np.array(aucs))
 
     results_dict = {'slide_id': slide_ids, 'Y': all_labels, 'Y_hat': all_preds}
     for c in range(args.n_classes):

@@ -6,11 +6,13 @@ Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Imag
 
 ***TL;DR:** CLAM is a high-throughput and interpretable method for data efficient whole slide image (WSI) classification using slide-level labels without any ROI extraction or patch-level annotations, and is capable of handling multi-class subtyping problems. Tested on three different WSI datasets, trained models adapt to independent test cohorts of WSI resections and biopsies as well as cellphone microscopy data.*
 
-[<img src="ani.gif" width="415px" align="left" />](http://clam.mahmoodlab.org)
+[<img src="ani.gif" width="470px" align="left" />](http://clam.mahmoodlab.org)
 ## CLAM: A Deep-Learning-based Pipeline for Data Efficient and Weakly Supervised Whole-Slide-level Analysis 
 [Pre-requisites](#pre-requisites) • [Installation](INSTALLATION.md) • [Segmentation and Patching](#wsi-segmentation-and-patching) • [Feature Extraction](#weakly-supervised-learning-using-slide-level-labels-with-clam) • [Weakly Supervised Training](#Training-Splits) • [Testing](#Testing-and-Evaluation-Script) • [Trained Models](#Trained-Model-Checkpoints) • [Examples](#examples) • [Pre-print](https://arxiv.org/abs/2004.09666) • [Demo](http://clam.mahmoodlab.org) • [Cite](#reference)
 
 ***How does CLAM work?** Clustering-constrained Attention Multiple Instance Learning (CLAM) is a deep-learning-based weakly-supervised method that uses attention-based learning to automatically identify sub-regions of high diagnostic value in order to accurately classify the whole slide, while also utilizing instance-level clustering over the representative regions identified to constrain and refine the feature space.*
+
+© [Mahmood Lab](http://www.mahmoodlab.org) - This code is made available under the GPLv3 License and is available for non-commercial academic purposes. 
 
 ## Pre-requisites:
 * Linux (Tested on Ubuntu 18.04)
@@ -125,7 +127,7 @@ python create_patches.py --source DATA_DIRECTORY --save_dir RESULTS_DIRECTORY --
 <img src="CLAM2.jpg" width="1000px" align="center" />
 
 ### Feature Extraction (GPU Example)
-A low-dimensional feature representation for each patch may be extracted using a pretrained feature encoder on imagenet or feature encoders trained using self-supervision. Currently feature extraction using a pretrained, modified ResNet50 is implemented.
+A low-dimensional feature representation for each patch may be extracted using a pretrained feature encoder on imagenet or feature encoders trained using self-supervision. Currently feature extraction using a pretrained, modified ResNet50 is implemented..
 
 ```shell
 CUDA_VISIBLE_DEVICES=0,1 python extract_features.py --data_dir DIR_TO_PATCHES --csv_path CSV_FILE_NAME --feat_dir FEATURES_DIRECTORY --batch_size 512
@@ -201,15 +203,17 @@ python create_splits_seq.py --task camelyon_40x_cv --seed 1 --label_frac 0.75 --
 The script uses the **Generic_WSI_Classification_Dataset** Class for which the constructor expects the same arguments as 
 **Generic_MIL_Dataset** (without the data_dir argument). For details, please refer to the dataset definition in **datasets/dataset_generic.py**
 
+
 ### GPU Training Example for Subtyping Problems (3-class RCC Subtyping)
 ``` shell
-CUDA_VISIBLE_DEVICES=0,1 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code tcga_kidney_cv_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task tcga_kidney_cv --model_type clam --log_data --subtyping --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0,1 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code tcga_kidney_cv_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task tcga_kidney_cv --model_type clam_sb --log_data --subtyping --data_root_dir DATA_ROOT_DIR
 ``` 
-
 ### GPU Training Example for Binary Positive vs. Negative Classification (Lymph Node Status)
 ``` shell
-CUDA_VISIBLE_DEVICES=0,1 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code camelyon_40x_cv_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task camelyon_40x_cv --model_type clam --log_data --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0,1 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code camelyon_40x_cv_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task camelyon_40x_cv --model_type clam_sb --log_data --data_root_dir DATA_ROOT_DIR
 ```
+Note: We have included the option to use a single-attention-branch CLAM model, which performs favoribly in most experiments and can be set via --model_type clam_sb (single branch) or clam_mb (multi branch). clam_sb is the default choice. Additionally, the user can adjust the number of patches used for clustering via --B.
+
 By default results will be saved to **results/exp_code** corresponding to the exp_code input argument from the user. If tensorboard logging is enabled (with the arugment toggle --log_data), the user can go into the results folder for the particular experiment, run:
 ``` shell
 tensorboard --logdir=.
@@ -223,11 +227,11 @@ python main.py -h
 ### Testing and Evaluation Script
 User also has the option of using the evluation script to test the performances of trained models. Examples corresponding to the models trained above are provided below:
 ``` shell
-CUDA_VISIBLE_DEVICES=0,1 python eval.py --drop_out --k 10 --models_exp_code camelyon_40x_cv_CLAM_50_s1 --save_exp_code camelyon_40x_cv_CLAM_50_s1_cv --task camelyon_40x_cv --model_type clam --results_dir results --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0,1 python eval.py --drop_out --k 10 --models_exp_code camelyon_40x_cv_CLAM_50_s1 --save_exp_code camelyon_40x_cv_CLAM_50_s1_cv --task camelyon_40x_cv --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR
 ```
 
 ``` shell
-CUDA_VISIBLE_DEVICES=0,1 python eval.py --drop_out --k 10 --models_exp_code tcga_kidney_cv_CLAM_50_s1 --save_exp_code tcga_kidney_cv_CLAM_50_s1_cv --task tcga_kidney_cv --model_type clam --results_dir results --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0,1 python eval.py --drop_out --k 10 --models_exp_code tcga_kidney_cv_CLAM_50_s1 --save_exp_code tcga_kidney_cv_CLAM_50_s1_cv --task tcga_kidney_cv --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR
 ```
 
 Once again, for information on each commandline argument, see:
@@ -239,9 +243,9 @@ By adding your own custom datasets into **eval.py** the same way as you do for *
 
 ### Trained Model Checkpoints
 For reproducability, all trained models and their corresponding train/val/test splits used can be accessed [here](https://drive.google.com/drive/folders/1NZ82z0U_cexP6zkx1mRk-QeJyKWk4Q7z?usp=sharing).
-The 3 main folders (**tcga_kidney_cv**, **tcga_cptac_lung_cv** and **camelyon_40x_cv**) correspond to models for RCC subtyping trained on the TCGA, for NSCLC subtyping trained on TCGA and CPTAC and for Lymph Node Metastasis (Breast) detection trained on Camelyon16+17 respectively. In each main folder, each subfolder corresponds to one set of 10-fold cross-validation experiments. For example, the subfolder tcga_kidney_cv_CLAM_50_s1 contains the 10 checkpoints corresponding to the 10 cross-validation folds for TCGA RCC subtyping, trained using CLAM with 50% of cases in the full training set. 
+The 3 main folders (**tcga_kidney_cv**, **tcga_cptac_lung_cv** and **camelyon_40x_cv**) correspond to models for RCC subtyping trained on the TCGA, for NSCLC subtyping trained on TCGA and CPTAC and for Lymph Node Metastasis (Breast) detection trained on Camelyon16+17 respectively. In each main folder, each subfolder corresponds to one set of 10-fold cross-validation experiments. For example, the subfolder tcga_kidney_cv_CLAM_50_s1 contains the 10 checkpoints corresponding to the 10 cross-validation folds for TCGA RCC subtyping, trained using CLAM with multi-attention branches using 50% of cases in the full training set. 
 
-For reproducability, these models can be evaluated on data prepared by following the same pipeline described in the sections above by calling **eval.py** with the appropriate arguments that specify the model options (--dropout should be enabled and either --model_type clam or --model_type mil should be set, for evaluation only, --subtyping flag does not make a difference) as well as where the model checkpoints (--results_dir and --models_exp_code) and data (--data_root_dir and --task) are stored.
+For reproducability, these models can be evaluated on data prepared by following the same pipeline described in the sections above by calling **eval.py** with the appropriate arguments that specify the model options (--dropout should be enabled and either --model_type clam_mb or --model_type mil should be set, for evaluation only, --subtyping flag does not make a difference) as well as where the model checkpoints (--results_dir and --models_exp_code) and data (--data_root_dir and --task) are stored.
 
 ### Examples
 

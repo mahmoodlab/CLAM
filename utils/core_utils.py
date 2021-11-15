@@ -1,12 +1,17 @@
 import numpy as np
 import torch
-import pickle 
+import torch.nn as nn
 from utils.utils import *
 import os
 from datasets.dataset_generic import save_splits
-from sklearn.metrics import roc_auc_score
 from models.model_mil import MIL_fc, MIL_fc_mc
-from models.model_clam import CLAM
+from models.model_clam import CLAM_MB, CLAM_SB
+from sklearn.preprocessing import label_binarize
+from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.metrics import auc as calc_auc
+
+#Modified by Qinghe 21/04/2021
+import time
 
 class Accuracy_Logger(object):
     """Accuracy logger"""
@@ -23,10 +28,14 @@ class Accuracy_Logger(object):
         Y = int(Y)
         self.data[Y]["count"] += 1
         self.data[Y]["correct"] += (Y_hat == Y)
-
-    def log_batch(self, count, correct, c):
-        self.data[c]["count"] += count
-        self.data[c]["correct"] += correct
+    
+    def log_batch(self, Y_hat, Y):
+        Y_hat = np.array(Y_hat).astype(int)
+        Y = np.array(Y).astype(int)
+        for label_class in np.unique(Y):
+            cls_mask = Y == label_class
+            self.data[label_class]["count"] += cls_mask.sum()
+            self.data[label_class]["correct"] += (Y_hat[cls_mask] == Y[cls_mask]).sum()
     
     def get_summary(self, c):
         count = self.data[c]["count"] 
@@ -99,9 +108,15 @@ def train(datasets, cur, args):
         writer = None
 
     print('\nInit train/val/test splits...', end=' ')
+    #Modified by Qinghe 21/04/2021
+    start_time = time.time()
     train_split, val_split, test_split = datasets
+    #Modified by Qinghe 21/04/2021
+    time_elapsed = time.time() - start_time
     save_splits(datasets, ['train', 'val', 'test'], os.path.join(args.results_dir, 'splits_{}.csv'.format(cur)))
     print('Done!')
+    #Modified by Qinghe 21/04/2021
+    print("split initialization time in s for fold {}: {}".format(cur, time_elapsed))
     print("Training on {} samples".format(len(train_split)))
     print("Validating on {} samples".format(len(val_split)))
     print("Testing on {} samples".format(len(test_split)))
@@ -117,23 +132,36 @@ def train(datasets, cur, args):
     print('Done!')
     
     print('\nInit Model...', end=' ')
+    #Modified by Qinghe 21/04/2021
+    start_time = time.time()
     model_dict = {"dropout": args.drop_out, 'n_classes': args.n_classes}
-    if args.model_type == 'clam' and args.subtyping:
+    if args.model_type == 'clam' and args.subtyping: # Is it a bug?! 'clam' is not an option for model_type
         model_dict.update({'subtyping': True})
     
     if args.model_size is not None and args.model_type != 'mil':
         model_dict.update({"size_arg": args.model_size})
     
-    if args.model_type =='clam':
+    if args.model_type in ['clam_sb', 'clam_mb']:
+        if args.subtyping:
+            model_dict.update({'subtyping': True})
+        
+        if args.B > 0:
+            model_dict.update({'k_sample': args.B})
+        
         if args.inst_loss == 'svm':
             from topk import SmoothTop1SVM
-            instance_loss_fn = SmoothTop1SVM(n_classes = 2)
+            instance_loss_fn = SmoothTop1SVM(n_classes = 2) # the instance_loss_fn is computed as one vs. rest for each class
             if device.type == 'cuda':
                 instance_loss_fn = instance_loss_fn.cuda()
         else:
             instance_loss_fn = nn.CrossEntropyLoss()
         
-        model = CLAM(**model_dict, instance_loss_fn=instance_loss_fn)
+        if args.model_type =='clam_sb':
+            model = CLAM_SB(**model_dict, instance_loss_fn=instance_loss_fn)
+        elif args.model_type == 'clam_mb':
+            model = CLAM_MB(**model_dict, instance_loss_fn=instance_loss_fn)
+        else:
+            raise NotImplementedError
     
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
@@ -142,7 +170,13 @@ def train(datasets, cur, args):
             model = MIL_fc(**model_dict)
     
     model.relocate()
+    
     print('Done!')
+    ###*********************************
+    #Modified by Qinghe 21/04/2021
+    time_elapsed = time.time() - start_time
+    print("model initialization time in s for fold {}: {}".format(cur, time_elapsed))
+    ###*********************************
     print_network(model)
 
     print('\nInit optimizer ...', end=' ')
@@ -150,11 +184,26 @@ def train(datasets, cur, args):
     print('Done!')
     
     print('\nInit Loaders...', end=' ')
-    train_loader = get_split_loader(train_split, training=True, testing = args.testing, weighted = args.weighted_sample)
+    #Modified by Qinghe 21/04/2021
+    start_time = time.time()
+    ###*********************************
+    #Modified by Qinghe 11/11/2021, data augmentation
+    #train_loader = get_split_loader(train_split, training=True, testing = args.testing, weighted = args.weighted_sample)
+    train_loader = get_split_loader(train_split, training=True, testing = args.testing, weighted = args.weighted_sample, train_augm = args.train_augm)
+    ###*********************************
+	# In theory, the validation set should have the same distribution as the test set. 
+	# So CLAM did it correct. 
+	# While AUC is a good metric to deal with imbalanced class, when we set the minority as positive class. 
+	# In future, test without weighting but focal loss. Not sure if AUC will improve but sure to destroy the ACC, but more reasonable prediction and probability
     val_loader = get_split_loader(val_split,  testing = args.testing)
     test_loader = get_split_loader(test_split, testing = args.testing)
     print('Done!')
-
+    ###*********************************
+    #Modified by Qinghe 21/04/2021
+    time_elapsed = time.time() - start_time
+    print("loader initialization time in s for fold {}: {}".format(cur, time_elapsed))
+    ###*********************************
+    
     print('\nSetup EarlyStopping...', end=' ')
     if args.early_stopping:
         early_stopping = EarlyStopping(patience = 20, stop_epoch=50, verbose = True)
@@ -163,19 +212,49 @@ def train(datasets, cur, args):
         early_stopping = None
     print('Done!')
 
+    ###*********************************
+    #Modified by Qinghe 21/04/2021
+    train_start_time = time.time()
+    epoch_times = 0.
+    ###*********************************
     for epoch in range(args.max_epochs):
-        if args.model_type == 'clam':     
+        if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:
+            #Modified by Qinghe 21/04/2021
+            epoch_start_time = time.time()
             train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn)
+            ###*********************************
+            #Modified by Qinghe 21/04/2021
+            epoch_elapsed = time.time() - epoch_start_time
+            print("training time in s for epoch {}: {}".format(epoch, epoch_elapsed))
+            epoch_times += epoch_elapsed
+            ###*********************************
             stop = validate_clam(cur, epoch, model, val_loader, args.n_classes, 
                 early_stopping, writer, loss_fn, args.results_dir)
         
         else:
+            #Modified by Qinghe 21/04/2021
+            epoch_start_time = time.time()
             train_loop(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn)
+            ###*********************************
+            #Modified by Qinghe 21/04/2021
+            epoch_elapsed = time.time() - epoch_start_time
+            print("training time in s for epoch {}: {}".format(epoch, epoch_elapsed))
+            epoch_times += epoch_elapsed
+            ###*********************************
             stop = validate(cur, epoch, model, val_loader, args.n_classes, 
                 early_stopping, writer, loss_fn, args.results_dir)
         
         if stop: 
             break
+    ###*********************************
+    #Modified by Qinghe 21/04/2021
+    print("\nTrained {} epoches for fold {}!".format(epoch+1, cur)) #27/05/2021 correct epoch to epoch+1
+        
+    train_time_elapsed = time.time() - train_start_time
+    
+    epoch_times /= epoch
+    print("average time in s per epoch: {}\n".format(epoch_times))
+        ###*********************************
 
     if args.early_stopping:
         model.load_state_dict(torch.load(os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur))))
@@ -202,7 +281,7 @@ def train(datasets, cur, args):
         writer.add_scalar('final/test_auc', test_auc, 0)
     
     writer.close()
-    return results_dict, test_auc, val_auc, 1-test_error, 1-val_error 
+    return results_dict, test_auc, val_auc, 1-test_error, 1-val_error, train_time_elapsed
 
 
 def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writer = None, loss_fn = None):
@@ -216,11 +295,22 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
     train_inst_loss = 0.
     inst_count = 0
 
-    sample_size = model.k_sample
-
+#    ###*********************************
+#    #Modified by Qinghe 21/04/2021: could output the min and max of the size
+#    data_sizes = []
+#    label_sizes = []
+#    bag_sizes = []
+#    ###*********************************
+        
     print('\n')
     for batch_idx, (data, label) in enumerate(loader):
         data, label = data.to(device), label.to(device)
+#        ###*********************************
+#        #Modified by Qinghe 21/04/2021: could output the min and max of the size
+#        data_sizes.append(data.element_size() * data.nelement())
+#        label_sizes.append(label.element_size() * label.nelement())
+#        bag_sizes.append(data.size(0))
+#    ###*********************************
         logits, Y_prob, Y_hat, _, instance_dict = model(data, label=label, instance_eval=True)
 
         acc_logger.log(Y_hat, label)
@@ -231,19 +321,15 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         inst_count+=1
         instance_loss_value = instance_loss.item()
         train_inst_loss += instance_loss_value
-
-        instance_loss = instance_dict['instance_loss']
-        inst_count+=1
-        instance_loss_value = instance_loss.item()
-        train_inst_loss += instance_loss_value
-
         
         total_loss = bag_weight * loss + (1-bag_weight) * instance_loss 
 
-        p_acc = instance_dict['p_acc']
-        n_acc = instance_dict['n_acc']
-        inst_logger.log_batch(sample_size, int(p_acc * sample_size), 1)
-        inst_logger.log_batch(sample_size, int(n_acc * sample_size), 0)
+        inst_preds = instance_dict['inst_preds']
+        inst_labels = instance_dict['inst_labels']
+        inst_logger.log_batch(inst_preds, inst_labels)
+        n_mask = np.equal(inst_labels, 0)
+        n_acc = (inst_labels[n_mask] == inst_preds[n_mask]).mean()
+        p_acc = (inst_labels[~n_mask] == inst_preds[~n_mask]).mean()
 
         train_loss += loss_value
         if (batch_idx + 1) % 5 == 0:
@@ -277,7 +363,7 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-        if writer:
+        if writer and acc is not None:
             writer.add_scalar('train/class_{}_acc'.format(i), acc, epoch)
 
     if writer:
@@ -393,7 +479,9 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
 
     return False
 
-def validate_clam(cur, epoch, model, loader, n_classes,  early_stopping = None, writer = None, loss_fn = None, results_dir = None):
+
+## Attention!! could not be used be ShuffleNet, since the performance averaged on batch while batch is a slide
+def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, writer = None, loss_fn = None, results_dir = None):
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
@@ -423,15 +511,18 @@ def validate_clam(cur, epoch, model, loader, n_classes,  early_stopping = None, 
             inst_count+=1
             instance_loss_value = instance_loss.item()
             val_inst_loss += instance_loss_value
-            p_acc = instance_dict['p_acc']
-            n_acc = instance_dict['n_acc']
-            inst_logger.log_batch(sample_size, int(p_acc * sample_size), 1)
-            inst_logger.log_batch(sample_size, int(n_acc * sample_size), 0)
+
+            inst_preds = instance_dict['inst_preds']
+            inst_labels = instance_dict['inst_labels']
+            inst_logger.log_batch(inst_preds, inst_labels)
+            n_mask = np.equal(inst_labels, 0)
+            n_acc = (inst_labels[n_mask] == inst_preds[n_mask]).mean()
+            p_acc = (inst_labels[~n_mask] == inst_preds[~n_mask]).mean()
 
             prob[batch_idx] = Y_prob.cpu().numpy()
             labels[batch_idx] = label.item()
             
-            error = calculate_error(Y_hat, label)
+            error = calculate_error(Y_hat, label) # 1- mean(true prediction / total prediction)
             val_error += error
 
     val_error /= len(loader)
@@ -439,9 +530,18 @@ def validate_clam(cur, epoch, model, loader, n_classes,  early_stopping = None, 
 
     if n_classes == 2:
         auc = roc_auc_score(labels, prob[:, 1])
-    
+        aucs = []
     else:
-        auc = roc_auc_score(labels, prob, multi_class='ovr')
+        aucs = []
+        binary_labels = label_binarize(labels, classes=[i for i in range(n_classes)])
+        for class_idx in range(n_classes):
+            if class_idx in labels:
+                fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], prob[:, class_idx])
+                aucs.append(calc_auc(fpr, tpr))
+            else:
+                aucs.append(float('nan'))
+
+        auc = np.nanmean(np.array(aucs))
 
     print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}, auc: {:.4f}'.format(val_loss, val_error, auc))
     if inst_count > 0:
@@ -453,7 +553,6 @@ def validate_clam(cur, epoch, model, loader, n_classes,  early_stopping = None, 
             if writer:
                 writer.add_scalar('val/inst_class_{}_acc'.format(i), acc, epoch)
     
-    
     if writer:
         writer.add_scalar('val/loss', val_loss, epoch)
         writer.add_scalar('val/auc', auc, epoch)
@@ -464,7 +563,7 @@ def validate_clam(cur, epoch, model, loader, n_classes,  early_stopping = None, 
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-        if writer:
+        if writer and acc is not None:
             writer.add_scalar('val/class_{}_acc'.format(i), acc, epoch)
      
 
@@ -510,9 +609,18 @@ def summary(model, loader, n_classes):
 
     if n_classes == 2:
         auc = roc_auc_score(all_labels, all_probs[:, 1])
-
+        aucs = []
     else:
-        auc = roc_auc_score(all_labels, all_probs, multi_class='ovr')
+        aucs = []
+        binary_labels = label_binarize(all_labels, classes=[i for i in range(n_classes)])
+        for class_idx in range(n_classes):
+            if class_idx in all_labels:
+                fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], all_probs[:, class_idx])
+                aucs.append(calc_auc(fpr, tpr))
+            else:
+                aucs.append(float('nan'))
+
+        auc = np.nanmean(np.array(aucs))
 
 
-    return patient_results, test_error, auc, acc_logger
+    return patient_results, test_error, auc, acc_logger # test_error wrong for binary, we should use the optimal threshold but not 50%

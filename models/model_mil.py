@@ -32,13 +32,13 @@ class MIL_fc(nn.Module):
             h = self.classifier.module[:3](h)
             logits = self.classifier.module[3](h)
         else:
-            logits  = self.classifier(h) # K x 1
-        top_instance_idx = torch.topk(logits[:, 1], self.top_k, dim=0)[1].view(1,)
-        
+            logits  = self.classifier(h) # K x 1. Qinghe: why not k x 2?
+        top_instance_idx = torch.topk(logits[:, 1], self.top_k, dim=0)[1].view(1,) # 1 is the target class
+    
         top_instance = torch.index_select(logits, dim=0, index=top_instance_idx)
         Y_hat = torch.topk(top_instance, 1, dim = 1)[1]
-        Y_prob = F.softmax(top_instance, dim = 1)
-        y_probs = F.softmax(logits, dim = 1)
+        Y_prob = F.softmax(top_instance, dim = 1) # top_instance for example tensor([[0.4909, 0.5091]], 2D
+        y_probs = F.softmax(logits, dim = 1) 
         results_dict = {}
 
         if return_features:

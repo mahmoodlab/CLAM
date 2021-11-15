@@ -113,7 +113,8 @@ def resnet50_baseline(pretrained=False):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet_Baseline(Bottleneck_Baseline, [3, 4, 6, 3])
+    # use adaptive mean-spatial pooling after the 3rd residual block of the network, so 3 residual blocks with 3,4,6 Bottleneck_Baseline, respectively
+    model = ResNet_Baseline(Bottleneck_Baseline, [3, 4, 6, 3]) 
     if pretrained:
         model = load_pretrained_weights(model, 'resnet50')
     return model
@@ -123,4 +124,73 @@ def load_pretrained_weights(model, name):
     model.load_state_dict(pretrained_dict, strict=False)
     return model
 
+#******************************************************************************
+# Add by Qinghe 07/11/2020
 
+from collections import OrderedDict
+import torchvision
+
+def resnet18_torchvision(pretrained=False):
+    """ resnet18 from torchvision
+    """
+    model = torchvision.models.resnet18(pretrained=pretrained)
+    
+    container_names = []
+    for name, module in model.named_children():
+        container_names.append(name)
+    # newmodel = torch.nn.Sequential(*list(model_conv.children())[:-1])
+    model = torch.nn.Sequential(OrderedDict(zip(container_names[:-1], list(model.children())[:-1])))
+    
+    return model
+
+def resnet34_torchvision(pretrained=False):
+    """ resnet34 from torchvision
+        one more block compared to the clam-modified one
+    """
+    model = torchvision.models.resnet34(pretrained=pretrained)
+    
+    container_names = []
+    for name, module in model.named_children():
+        container_names.append(name)
+    # newmodel = torch.nn.Sequential(*list(model_conv.children())[:-1])
+    model = torch.nn.Sequential(OrderedDict(zip(container_names[:-1], list(model.children())[:-1])))
+    
+    return model
+
+def resnet152_torchvision(pretrained=False):
+    """ resnet152 from torchvision
+    """
+    model = torchvision.models.resnet152(pretrained=pretrained)
+    
+    container_names = []
+    for name, module in model.named_children():
+        container_names.append(name)
+    del(container_names[-1])
+    del(container_names[-2])
+    model_children = list(model.children())
+    del(model_children[-3:])
+    resnet50 = resnet50_baseline(pretrained=pretrained)
+    model_children.append(list(resnet50.children())[-1])
+
+    # newmodel = torch.nn.Sequential(*list(model_conv.children())[:-1])
+    model = torch.nn.Sequential(OrderedDict(zip(container_names, model_children)))
+    
+    return model
+
+def densenet121_torchvision(pretrained=False):
+    """ desnet121 from torchvision
+        Have to first modify "/home/visiopharm5/anaconda3/envs/clam/lib/python3.7/site-packages/torchvision/models/densenet.py"
+        Otherwise will get a KeyError: 'module name can\'t contain "."'
+    """
+    model = torchvision.models.densenet121(pretrained=pretrained)
+    
+    container_names = []
+    for name, module in model.named_children():
+        container_names.append(name) # features, classifier
+
+    # newmodel = torch.nn.Sequential(*list(model_conv.children())[:-1])
+    model = torch.nn.Sequential(OrderedDict(zip(container_names[:-1], list(model.children())[:-1]))) # remove the classifier layer
+    
+    return model
+
+# print(resnet152_torchvision(False))

@@ -1,135 +1,59 @@
 from __future__ import print_function
 
-import argparse
-import pdb
-import os
-import math
-
-# internal imports
-from utils.file_utils import save_pkl, load_pkl
-from utils.utils import *
-from utils.core_utils import train
-from datasets.dataset_generic import Generic_WSI_Classification_Dataset, Generic_MIL_Dataset
-
-# pytorch imports
-import torch
-from torch.utils.data import DataLoader, sampler
-import torch.nn as nn
-import torch.nn.functional as F
-
-import pandas as pd
 import numpy as np
 
+import argparse
+import torch
+import torch.nn as nn
+import pdb
+import os
 import time
+import pandas as pd
+from utils.utils import *
+from math import floor
+import matplotlib.pyplot as plt
+from datasets.dataset_generic import Generic_WSI_Classification_Dataset, Generic_MIL_Dataset, save_splits
+import h5py
+from utils.eval_utils import *
 
-
-def main(args):
-    # create results directory if necessary
-    if not os.path.isdir(args.results_dir):
-        os.mkdir(args.results_dir)
-
-    if args.k_start == -1:
-        start = 0
-    else:
-        start = args.k_start
-    if args.k_end == -1:
-        end = args.k
-    else:
-        end = args.k_end
-
-    all_test_auc = []
-    all_val_auc = []
-    all_test_acc = []
-    all_val_acc = []
-    
-    #Modified by Qinghe 21/04/2021
-    train_times = 0.
-    
-    folds = np.arange(start, end)
-    for i in folds:
-        seed_torch(args.seed)
-        train_dataset, val_dataset, test_dataset = dataset.return_splits(from_id=False, 
-                csv_path='{}/splits_{}.csv'.format(args.split_dir, i))
-        print(train_dataset)
-        
-        datasets = (train_dataset, val_dataset, test_dataset)
-        ###*********************************
-        #Modified by Qinghe 21/04/2021
-        train_time_elapsed = -1 # Default time
-#        results, test_auc, val_auc, test_acc, val_acc  = train(datasets, i, args)
-        results, test_auc, val_auc, test_acc, val_acc, train_time_elapsed  = train(datasets, i, args)
-        print("Training time in s for fold {}: {}".format(i, train_time_elapsed))
-        ###*********************************
-        all_test_auc.append(test_auc)
-        all_val_auc.append(val_auc)
-        all_test_acc.append(test_acc)
-        all_val_acc.append(val_acc)
-        #write results to pkl
-        filename = os.path.join(args.results_dir, 'split_{}_results.pkl'.format(i))
-        save_pkl(filename, results)
-        
-        ###*********************************
-        #Modified by Qinghe 21/04/2021
-        train_times += train_time_elapsed
-    print()
-    print("Average train time in s per fold: {}".format(train_times / len(folds)))
-    # print used gpu which could affect training time
-    print('Used GPU: {}, ({})'.format(torch.cuda.device_count(), torch.cuda.get_device_name(0)))
-    print()
-        ###*********************************
-
-    final_df = pd.DataFrame({'folds': folds, 'test_auc': all_test_auc, 
-        'val_auc': all_val_auc, 'test_acc': all_test_acc, 'val_acc' : all_val_acc})
-
-    if len(folds) != args.k:
-        save_name = 'summary_partial_{}_{}.csv'.format(start, end)
-    else:
-        save_name = 'summary.csv'
-    final_df.to_csv(os.path.join(args.results_dir, save_name)) # 2 acc wrong for binary, we should use the optimal threshold but not 50%
-
-# Generic training settings
-parser = argparse.ArgumentParser(description='Configurations for WSI Training')
-parser.add_argument('--data_root_dir', type=str, default=None, 
-                    help='root of data directory')
+#%%
+# Training settings
+parser = argparse.ArgumentParser(description='CLAM Attention Score Script')
+parser.add_argument('--data_root_dir', type=str, default=None,
+                    help='data directory')
 parser.add_argument('--data_dir', type=str, default=None, 
                     help='data directory')
-parser.add_argument('--max_epochs', type=int, default=200,
-                    help='maximum number of epochs to train (default: 200)')
-parser.add_argument('--lr', type=float, default=1e-4,
-                    help='learning rate (default: 0.0001)')
-parser.add_argument('--label_frac', type=float, default=1.0,
-                    help='fraction of training labels (default: 1.0)')
-parser.add_argument('--reg', type=float, default=1e-5,
-                    help='weight decay (default: 1e-5)')
-parser.add_argument('--seed', type=int, default=1, 
-                    help='random seed for reproducible experiment (default: 1)')
+parser.add_argument('--results_dir', type=str, default='./results',
+                    help='relative path to results folder, i.e. '+
+                    'the directory containing models_exp_code relative to project root (default: ./results)')
+parser.add_argument('--eval_dir', type=str, default='./eval_results',
+					help='directory to save eval results')
+parser.add_argument('--save_exp_code', type=str, default=None,
+                    help='experiment code to save eval results')
+parser.add_argument('--models_exp_code', type=str, default=None,
+                    help='experiment code to load trained models (directory under results_dir containing model checkpoints')
+parser.add_argument('--splits_dir', type=str, default=None,
+                    help='splits directory, if using custom splits other than what matches the task (default: None)')
+parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', 
+                    help='size of model (default: small)')
+parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
+                    help='type of model (default: clam_sb)')
+parser.add_argument('--drop_out', action='store_true', default=False, 
+                    help='whether model uses dropout')
 parser.add_argument('--k', type=int, default=10, help='number of folds (default: 10)')
 parser.add_argument('--k_start', type=int, default=-1, help='start fold (default: -1, last fold)')
 parser.add_argument('--k_end', type=int, default=-1, help='end fold (default: -1, first fold)')
-parser.add_argument('--results_dir', default='./results', help='results directory (default: ./results)')
-parser.add_argument('--split_dir', type=str, default=None, 
-                    help='manually specify the set of splits to use, ' 
-                    +'instead of infering from the task and label_frac argument (default: None)')
-parser.add_argument('--log_data', action='store_true', default=False, help='log data using tensorboard')
-parser.add_argument('--testing', action='store_true', default=False, help='debugging tool')
-parser.add_argument('--early_stopping', action='store_true', default=False, help='enable early stopping')
-parser.add_argument('--opt', type=str, choices = ['adam', 'sgd'], default='adam')
-parser.add_argument('--drop_out', action='store_true', default=False, help='enabel dropout (p=0.25)')
-parser.add_argument('--bag_loss', type=str, choices=['svm', 'ce'], default='ce',
-                     help='slide-level classification loss function (default: ce)')
-parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
-                    help='type of model (default: clam_sb, clam w/ single attention branch)')
-parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
-parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
-parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
-parser.add_argument('--task', type=str, choices=['camelyon_40x_cv',  'tcga_kidney_cv', 'tcga_hcc_test_cv_c2_622', 
-                                                 'tcga_hcc_177_cv_c2_811', 'tcga_hcc_177_cv_c3_811',
-                                                 'tcga_hcc_177_cv_c2_622', 'tcga_hcc_177_cv_c3_622',
-                                                 'tcga_hcc_354_v1_cv_c2_811', 'tcga_hcc_354_v1_cv_c2_622', 
+parser.add_argument('--fold', type=int, default=-1, help='single fold to evaluate')
+parser.add_argument('--micro_average', action='store_true', default=False, 
+                    help='use micro_average instead of macro_avearge for multiclass AUC')
+parser.add_argument('--split', type=str, choices=['train', 'val', 'test', 'all'], default='test')
+parser.add_argument('--task', type=str, choices=['camelyon_40x_cv', 'tcga_kidney_cv', 'tcga_hcc_test_cv_c2_622',
+                                                 'tcga_hcc_177_cv_c2_811', 'tcga_hcc_177_cv_c3_811', 
+                                                 'tcga_hcc_177_cv_c2_622', 'tcga_hcc_177_cv_c3_622', 
+                                                 'tcga_hcc_354_v1_cv_c2_811','tcga_hcc_354_v1_cv_c2_622', 
                                                  'tcga_hcc_349_v1_cv_c2_811','tcga_hcc_349_v1_cv_c2_622',
-                                                 'tcga_hcc_354_v2_cv_c2_811', 'tcga_hcc_349_v2_cv_c2_622',
+                                                 'tcga_hcc_354_v2_cv_c2_811','tcga_hcc_349_v2_cv_c2_622', 
                                                  'tcga_hcc_349_v2_cv_c3_622', 'tcga_hcc_349_v3_cv_c2_622',
-                                                 'tcga_hcc_349_v1_cv_c2_core_811', 'tcga_hcc_349_v3_cv_c2_core_811',
                                                  'tcga_hcc_349_v4_cv_c3_core_811', 'tcga_hcc_349_v4_cv_c2_core_811',
                                                  'tcga_hcc_349_v1_cv_highvsrest_622', 'tcga_hcc_349_v1_cv_highvsrest_core_622',
                                                  'tcga_hcc_349_Inflammatory_cv_lowvsrest_core_622', 
@@ -149,83 +73,99 @@ parser.add_argument('--task', type=str, choices=['camelyon_40x_cv',  'tcga_kidne
                                                  'tcga_hcc_349_Ribas_10G_Interferon_Gamma_cv_lowvsrest_core_622',
                                                  'tcga_hcc_349_Ribas_10G_Interferon_Gamma_cv_lowvsrest_622',
                                                  
-                                                 'tcga_hcc_349_10G_preliminary_IFN-γ_cv_highvsrest_622',
-                                                 'tcga_hcc_349_Expanded_immune_gene_cv_highvsrest_622'
+                                                 'mondor_hcc_258_v1_cv_highvsrest_00X', 'mondor_hcc_258_v1_cv_highvsrest_core_00X',
+                                                 'mondor_hcc_258_Inflammatory_cv_lowvsrest_core_00X', 
+                                                 'mondor_hcc_258_Inflammatory_cv_lowvsrest_00X',
+                                                 'mondor_hcc_258_Inflammatory_cv_highvsrest_core_00X', 
+                                                 'mondor_hcc_258_Inflammatory_cv_highvsrest_00X',
+                                                 'mondor_hcc_258_Gajewski_13G_Inflammatory_cv_highvsrest_core_00X',
+                                                 'mondor_hcc_258_Gajewski_13G_Inflammatory_cv_highvsrest_00X',
+                                                 'mondor_hcc_258_6G_Interferon_Gamma_cv_highvsrest_core_00X',
+                                                 'mondor_hcc_258_6G_Interferon_Gamma_cv_highvsrest_00X',
+                                                 'mondor_hcc_258_Interferon_Gamma_Biology_cv_highvsrest_core_00X',
+                                                 'mondor_hcc_258_Interferon_Gamma_Biology_cv_highvsrest_00X',
+                                                 'mondor_hcc_258_T-cell_Exhaustion_cv_highvsrest_core_00X',
+                                                 'mondor_hcc_258_T-cell_Exhaustion_cv_highvsrest_00X',
+                                                 'mondor_hcc_258_Ribas_10G_Interferon_Gamma_cv_highvsrest_core_00X',
+                                                 'mondor_hcc_258_Ribas_10G_Interferon_Gamma_cv_highvsrest_00X',
+                                                 'mondor_hcc_258_Ribas_10G_Interferon_Gamma_cv_lowvsrest_core_00X',
+                                                 'mondor_hcc_258_Ribas_10G_Interferon_Gamma_cv_lowvsrest_00X',
+                                                  
+                                                 'mondor_hcc_139_Inflammatory_cv_highvsrest_00X',
+                                                 'mondor_hcc_139_Gajewski_13G_Inflammatory_cv_highvsrest_00X',
+                                                 'mondor_hcc_139_6G_Interferon_Gamma_cv_highvsrest_00X',
+                                                 'mondor_hcc_139_Interferon_Gamma_Biology_cv_highvsrest_00X',
+                                                 'mondor_hcc_139_T-cell_Exhaustion_cv_highvsrest_00X',
+                                                 'mondor_hcc_139_Ribas_10G_Interferon_Gamma_cv_highvsrest_00X',
                                                  
-                                                 'tcga_hcc_354_Inflammatory_cv_lowvsrest_622',
-                                                 'tcga_hcc_354_Inflammatory_cv_highvsrest_622',
-                                                 'tcga_hcc_354_Gajewski_13G_Inflammatory_cv_highvsrest_622',
-                                                 'tcga_hcc_354_6G_Interferon_Gamma_cv_highvsrest_622',
-                                                 'tcga_hcc_354_Interferon_Gamma_Biology_cv_highvsrest_622',
-                                                 'tcga_hcc_354_T-cell_Exhaustion_cv_highvsrest_622',
-                                                 'tcga_hcc_354_Ribas_10G_Interferon_Gamma_cv_highvsrest_622',
-                                                 'tcga_hcc_354_Ribas_10G_Interferon_Gamma_cv_lowvsrest_622'])
-### CLAM specific options
-parser.add_argument('--no_inst_cluster', action='store_true', default=False,
-                     help='disable instance-level clustering')
-parser.add_argument('--inst_loss', type=str, choices=['svm', 'ce', None], default=None,
-                     help='instance-level clustering loss function (default: None)')
-parser.add_argument('--subtyping', action='store_true', default=False, 
-                     help='subtyping problem')
-parser.add_argument('--bag_weight', type=float, default=0.7,
-                    help='clam: weight coefficient for bag-level loss (default: 0.7)')
-parser.add_argument('--B', type=int, default=8, help='numbr of positive/negative patches to sample for clam')
-
-parser.add_argument('--use_h5', action='store_true', default=False, help='load features from h5 format')
-#Modified by Qinghe 11/11/2021, data augmentation
-parser.add_argument('--train_augm', action='store_true', default=False, help='enable data augmentation on training')
+                                                 'tcga_colorectal_1_cv_00X'])
+parser.add_argument('--feature_bags', type=str, nargs='+', default=None, 
+                    help='names of patched feature files (ends with .pt) for visualization (default: [])')
 args = parser.parse_args()
-device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-def seed_torch(seed=7):
-    import random
-    random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if device.type == 'cuda':
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed) # if you are using multi-GPU.
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
+#%%
+# Parameters for test
+#parser = argparse.ArgumentParser(description='CLAM Attention Score Script')
+#args = parser.parse_args()
+#
+#args.drop_out = True
+#args.n_classes = 2
+#args.model_size = 'small'
+#args.model_type = 'clam_sb'
+#
+#ckpt_path = '/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/results/training_gene_signatures/tcga_hcc_349_6G_Interferon_Gamma_cv_highvsrest_622_CLAM_50_s1/s_0_checkpoint.pt'
 
-seed_torch(args.seed)
+#%%
 
 encoding_size = 1024
-settings = {'num_splits': args.k, 
-            'k_start': args.k_start,
-            'k_end': args.k_end,
-            'task': args.task,
-            'max_epochs': args.max_epochs, 
-            'results_dir': args.results_dir, 
-            'lr': args.lr,
-            'experiment': args.exp_code,
-            'reg': args.reg,
-            'label_frac': args.label_frac,
-            'bag_loss': args.bag_loss,
-            'seed': args.seed,
+
+if args.k_start == -1:
+    start = 0
+else:
+    start = args.k_start
+if args.k_end == -1:
+    end = args.k
+else:
+    end = args.k_end
+
+if args.fold == -1:
+    folds = range(start, end)
+else:
+    folds = range(args.fold, args.fold+1)
+
+#if args.bestk >= 0:
+#    bestk = args.bestk
+    
+args.models_dir = os.path.join(args.results_dir, str(args.models_exp_code))
+#ckpt_path = os.path.join(args.models_dir, 's_{}_checkpoint.pt'.format(fold))
+ckpt_paths = [os.path.join(args.models_dir, 's_{}_checkpoint.pt'.format(fold)) for fold in folds]
+#print("ckpt_path:")
+#print(ckpt_path)
+
+#args.save_dir = os.path.join('./eval_results', 'EVAL_' + str(args.save_exp_code), "attention_scores_" + str(bestk))
+args.save_dir = os.path.join(args.eval_dir, 'EVAL_' + str(args.save_exp_code))
+#os.makedirs(args.save_dir, exist_ok=True)
+
+if args.splits_dir is None:
+    args.splits_dir = args.models_dir
+
+assert os.path.isdir(args.models_dir)
+assert os.path.isdir(args.splits_dir)
+
+settings = {'task': args.task,
+            'split': args.split,
+            'save_dir': args.save_dir, 
+            'models_dir': args.models_dir,
             'model_type': args.model_type,
-            'model_size': args.model_size,
-            "use_drop_out": args.drop_out,
-            'weighted_sample': args.weighted_sample,
-            #Modified by Qinghe 11/11/2021, data augmentation
-            'train_augm': args.train_augm,
-            'opt': args.opt}
+            'drop_out': args.drop_out,
+            'model_size': args.model_size}
 
-if args.model_type in ['clam_sb', 'clam_mb']:
-   settings.update({'bag_weight': args.bag_weight,
-                    'inst_loss': args.inst_loss,
-                    'B': args.B})
-
-print('\nLoad Dataset')
-#Modified by Qinghe 21/04/2021
-start_time = time.time()
+print(settings)
 if args.task == 'camelyon_40x_cv':
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/camelyon_clean.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'camelyon_feat_resnet'),
+                            data_dir= os.path.join(args.data_root_dir, 'camelyon_40x_resnet_features'),
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'normal_tissue':0, 'tumor_tissue':1},
                             patient_strat=False,
@@ -236,72 +176,72 @@ elif args.task == 'tcga_kidney_cv':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_kidney_clean.csv',
                             data_dir= os.path.join(args.data_root_dir, 'tcga_kidney_resnet_features'),
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'TCGA-KICH':0, 'TCGA-KIRC':1, 'TCGA-KIRP':2},
                             patient_strat= False,
                             ignore=['TCGA-SARC'])
-    if args.model_type == 'clam':
-        assert args.subtyping
 
-elif args.task == 'tcga_hcc_test_cv_c2_622':
+elif args.task == 'tcga_hcc_test_cv':
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/test_dataset_2.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High':1},
                             label_col = 'cluster',
                             patient_strat= True,
                             ignore=[])
-        
+    
+
 elif args.task == 'tcga_hcc_177_cv_c2_811':
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_177_c2.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High':1},
                             label_col = 'cluster',
                             patient_strat= True,
                             ignore=[])
-        
-elif args.task == 'tcga_hcc_177_cv_c2_622':
-    args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_177_c2.csv',
-                            data_dir= args.data_dir,
-                            shuffle = False, 
-                            seed = args.seed, 
-                            print_info = True,
-                            label_dict = {'Cluster Low':0, 'Cluster High':1},
-                            label_col = 'cluster',
-                            patient_strat= True,
-                            ignore=[])
-        
-elif args.task == 'tcga_hcc_177_cv_c3_622':
+    
+elif args.task == 'tcga_hcc_177_cv_c3_811':
     args.n_classes=3
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_177_c3.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster Median':1, 'Cluster High':2},
                             label_col = 'cluster',
                             patient_strat= True,
                             ignore=[])
-    if args.model_type == 'clam': # Is it a bug?! 'clam' is not an option for model_type
-        assert args.subtyping # check this condition, if False, throw out an AssertionError 
-    if args.model_type in ['clam_sb', 'clam_mb']:
-        assert args.subtyping
-        
+    
+elif args.task == 'tcga_hcc_177_cv_c2_622':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_177_c2.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'tcga_hcc_177_cv_c3_622':
+    args.n_classes=3
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_177_c3.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Low':0, 'Cluster Median':1, 'Cluster High':2},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
 elif args.task == 'tcga_hcc_354_v1_cv_c2_811':
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_354_v1_c2.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -313,7 +253,6 @@ elif args.task == 'tcga_hcc_354_v1_cv_c2_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_354_v1_c2.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -325,7 +264,6 @@ elif args.task == 'tcga_hcc_349_v1_cv_c2_811':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_v1_c2.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -337,19 +275,17 @@ elif args.task == 'tcga_hcc_349_v1_cv_c2_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_v1_c2.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High':1},
                             label_col = 'cluster',
                             patient_strat= True,
                             ignore=[])
-        
+    
 elif args.task == 'tcga_hcc_354_v2_cv_c2_811':
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_354_v2_c2.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -361,7 +297,6 @@ elif args.task == 'tcga_hcc_349_v2_cv_c2_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_v2_c2.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -373,7 +308,6 @@ elif args.task == 'tcga_hcc_349_v2_cv_c3_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_v2_c3.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster Median':1, 'Cluster High':2},
                             label_col = 'cluster',
@@ -385,7 +319,6 @@ elif args.task == 'tcga_hcc_349_v3_cv_c2_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_v3_c2.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -397,7 +330,6 @@ elif args.task == 'tcga_hcc_349_v1_cv_c2_core_811':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_v1_c2_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -409,7 +341,6 @@ elif args.task == 'tcga_hcc_349_v3_cv_c2_core_811':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_v3_c2_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -421,7 +352,6 @@ elif args.task == 'tcga_hcc_349_v4_cv_c3_core_811':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_v4_c3_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster Median':1, 'Cluster High':2},
                             label_col = 'cluster',
@@ -433,7 +363,6 @@ elif args.task == 'tcga_hcc_349_v4_cv_c2_core_811':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_v4_c2_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -445,7 +374,6 @@ elif args.task == 'tcga_hcc_349_v1_cv_highvsrest_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_v1_highvsrest.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -457,7 +385,6 @@ elif args.task == 'tcga_hcc_349_v1_cv_highvsrest_core_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_v1_highvsrest_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -469,7 +396,6 @@ elif args.task == 'tcga_hcc_349_Inflammatory_cv_lowvsrest_core_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_Inflammatory_lowvsrest_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High + Median':1},
                             label_col = 'cluster',
@@ -481,19 +407,6 @@ elif args.task == 'tcga_hcc_349_Inflammatory_cv_lowvsrest_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_Inflammatory_lowvsrest.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
-                            print_info = True,
-                            label_dict = {'Cluster Low':0, 'Cluster High + Median':1},
-                            label_col = 'cluster',
-                            patient_strat= True,
-                            ignore=[])
-    
-elif args.task == 'tcga_hcc_354_Inflammatory_cv_lowvsrest_622':
-    args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_354_Inflammatory_lowvsrest.csv',
-                            data_dir= args.data_dir,
-                            shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High + Median':1},
                             label_col = 'cluster',
@@ -505,7 +418,6 @@ elif args.task == 'tcga_hcc_349_Inflammatory_cv_highvsrest_core_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_Inflammatory_highvsrest_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -517,31 +429,17 @@ elif args.task == 'tcga_hcc_349_Inflammatory_cv_highvsrest_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_Inflammatory_highvsrest.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
                             patient_strat= True,
                             ignore=[])
     
-elif args.task == 'tcga_hcc_354_Inflammatory_cv_highvsrest_622':
-    args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_354_Inflammatory_highvsrest.csv',
-                            data_dir= args.data_dir,
-                            shuffle = False, 
-                            seed = args.seed, 
-                            print_info = True,
-                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
-                            label_col = 'cluster',
-                            patient_strat= True,
-                            ignore=[])
-
 elif args.task == 'tcga_hcc_349_Gajewski_13G_Inflammatory_cv_highvsrest_core_622':
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_Gajewski_13G_Inflammatory_highvsrest_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -553,19 +451,6 @@ elif args.task == 'tcga_hcc_349_Gajewski_13G_Inflammatory_cv_highvsrest_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_Gajewski_13G_Inflammatory_highvsrest.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
-                            print_info = True,
-                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
-                            label_col = 'cluster',
-                            patient_strat= True,
-                            ignore=[])
-    
-elif args.task == 'tcga_hcc_354_Gajewski_13G_Inflammatory_cv_highvsrest_622':
-    args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_354_Gajewski_13G_Inflammatory_highvsrest.csv',
-                            data_dir= args.data_dir,
-                            shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -577,7 +462,6 @@ elif args.task == 'tcga_hcc_349_6G_Interferon_Gamma_cv_highvsrest_core_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_6G_Interferon_Gamma_highvsrest_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -589,31 +473,17 @@ elif args.task == 'tcga_hcc_349_6G_Interferon_Gamma_cv_highvsrest_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_6G_Interferon_Gamma_highvsrest.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
                             patient_strat= True,
                             ignore=[])
     
-elif args.task == 'tcga_hcc_354_6G_Interferon_Gamma_cv_highvsrest_622':
-    args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_354_6G_Interferon_Gamma_highvsrest.csv',
-                            data_dir= args.data_dir,
-                            shuffle = False, 
-                            seed = args.seed, 
-                            print_info = True,
-                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
-                            label_col = 'cluster',
-                            patient_strat= True,
-                            ignore=[])
-
 elif args.task == 'tcga_hcc_349_Interferon_Gamma_Biology_cv_highvsrest_core_622':
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_Interferon_Gamma_Biology_highvsrest_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -625,19 +495,6 @@ elif args.task == 'tcga_hcc_349_Interferon_Gamma_Biology_cv_highvsrest_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_Interferon_Gamma_Biology_highvsrest.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
-                            print_info = True,
-                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
-                            label_col = 'cluster',
-                            patient_strat= True,
-                            ignore=[])
-    
-elif args.task == 'tcga_hcc_354_Interferon_Gamma_Biology_cv_highvsrest_622':
-    args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_354_Interferon_Gamma_Biology_highvsrest.csv',
-                            data_dir= args.data_dir,
-                            shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -649,7 +506,6 @@ elif args.task == 'tcga_hcc_349_T-cell_Exhaustion_cv_highvsrest_core_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_T-cell_Exhaustion_highvsrest_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -661,19 +517,6 @@ elif args.task == 'tcga_hcc_349_T-cell_Exhaustion_cv_highvsrest_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_T-cell_Exhaustion_highvsrest.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
-                            print_info = True,
-                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
-                            label_col = 'cluster',
-                            patient_strat= True,
-                            ignore=[])
-    
-elif args.task == 'tcga_hcc_354_T-cell_Exhaustion_cv_highvsrest_622':
-    args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_354_T-cell_Exhaustion_highvsrest.csv',
-                            data_dir= args.data_dir,
-                            shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -685,7 +528,6 @@ elif args.task == 'tcga_hcc_349_Ribas_10G_Interferon_Gamma_cv_highvsrest_core_62
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_Ribas_10G_Interferon_Gamma_highvsrest_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -697,19 +539,6 @@ elif args.task == 'tcga_hcc_349_Ribas_10G_Interferon_Gamma_cv_highvsrest_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_Ribas_10G_Interferon_Gamma_highvsrest.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
-                            print_info = True,
-                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
-                            label_col = 'cluster',
-                            patient_strat= True,
-                            ignore=[])
-    
-elif args.task == 'tcga_hcc_354_Ribas_10G_Interferon_Gamma_cv_highvsrest_622':
-    args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_354_Ribas_10G_Interferon_Gamma_highvsrest.csv',
-                            data_dir= args.data_dir,
-                            shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
@@ -721,7 +550,6 @@ elif args.task == 'tcga_hcc_349_Ribas_10G_Interferon_Gamma_cv_lowvsrest_core_622
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_Ribas_10G_Interferon_Gamma_lowvsrest_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High + Median':1},
                             label_col = 'cluster',
@@ -733,86 +561,322 @@ elif args.task == 'tcga_hcc_349_Ribas_10G_Interferon_Gamma_cv_lowvsrest_622':
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_Ribas_10G_Interferon_Gamma_lowvsrest.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Low':0, 'Cluster High + Median':1},
                             label_col = 'cluster',
                             patient_strat= True,
                             ignore=[])
-    
-elif args.task == 'tcga_hcc_354_Ribas_10G_Interferon_Gamma_cv_lowvsrest_622':
+
+### Mondor ##########################################################################################################
+
+elif args.task == 'mondor_hcc_258_v1_cv_highvsrest_00X':
     args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_354_Ribas_10G_Interferon_Gamma_lowvsrest.csv',
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_v1_highvsrest.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
-                            print_info = True,
-                            label_dict = {'Cluster Low':0, 'Cluster High + Median':1},
-                            label_col = 'cluster',
-                            patient_strat= True,
-                            ignore=[])
-    
-### Melanoma gene signatures ############################################################################################
-    
-elif args.task == 'tcga_hcc_349_10G_preliminary_IFN-γ_cv_highvsrest_622':
-    args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_10G_preliminary_IFN-γ_highvsrest.csv',
-                            data_dir= args.data_dir,
-                            shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
                             patient_strat= True,
                             ignore=[])
     
-elif args.task == 'tcga_hcc_349_Expanded_immune_gene_cv_highvsrest_622':
+elif args.task == 'mondor_hcc_258_v1_cv_highvsrest_core_00X':
     args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_hcc_349_Expanded_immune_gene_highvsrest.csv',
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_v1_highvsrest_core.csv',
                             data_dir= args.data_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
                             label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
                             label_col = 'cluster',
                             patient_strat= True,
                             ignore=[])
     
+elif args.task == 'mondor_hcc_258_Inflammatory_cv_highvsrest_core_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_Inflammatory_highvsrest_core.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_258_Inflammatory_cv_highvsrest_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_Inflammatory_highvsrest.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_139_Inflammatory_cv_highvsrest_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_139_Inflammatory_highvsrest.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_258_Gajewski_13G_Inflammatory_cv_highvsrest_core_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_Gajewski_13G_Inflammatory_highvsrest_core.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_258_Gajewski_13G_Inflammatory_cv_highvsrest_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_Gajewski_13G_Inflammatory_highvsrest.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_139_Gajewski_13G_Inflammatory_cv_highvsrest_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_139_Gajewski_13G_Inflammatory_highvsrest.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_258_6G_Interferon_Gamma_cv_highvsrest_core_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_6G_Interferon_Gamma_highvsrest_core.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_258_6G_Interferon_Gamma_cv_highvsrest_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_6G_Interferon_Gamma_highvsrest.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_139_6G_Interferon_Gamma_cv_highvsrest_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_139_6G_Interferon_Gamma_highvsrest.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_258_Interferon_Gamma_Biology_cv_highvsrest_core_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_Interferon_Gamma_Biology_highvsrest_core.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_258_Interferon_Gamma_Biology_cv_highvsrest_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_Interferon_Gamma_Biology_highvsrest.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_139_Interferon_Gamma_Biology_cv_highvsrest_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_139_Interferon_Gamma_Biology_highvsrest.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_258_T-cell_Exhaustion_cv_highvsrest_core_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_T-cell_Exhaustion_highvsrest_core.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_258_T-cell_Exhaustion_cv_highvsrest_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_T-cell_Exhaustion_highvsrest.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_139_T-cell_Exhaustion_cv_highvsrest_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_139_T-cell_Exhaustion_highvsrest.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_258_Ribas_10G_Interferon_Gamma_cv_highvsrest_core_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_Ribas_10G_Interferon_Gamma_highvsrest_core.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_258_Ribas_10G_Interferon_Gamma_cv_highvsrest_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_Ribas_10G_Interferon_Gamma_highvsrest.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_139_Ribas_10G_Interferon_Gamma_cv_highvsrest_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_139_Ribas_10G_Interferon_Gamma_highvsrest.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_258_Ribas_10G_Interferon_Gamma_cv_lowvsrest_core_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_Ribas_10G_Interferon_Gamma_lowvsrest_core.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Low':0, 'Cluster High + Median':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+elif args.task == 'mondor_hcc_258_Ribas_10G_Interferon_Gamma_cv_lowvsrest_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/mondor_hcc_258_Ribas_10G_Interferon_Gamma_lowvsrest.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Low':0, 'Cluster High + Median':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+    
+### Colorectal ##########################################################################################################
+    
+elif args.task == 'tcga_colorectal_1_cv_00X':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_colorectal.csv',
+                            data_dir= args.data_dir,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = {'Cluster Median + Low':0, 'Cluster High':1},
+                            label_col = 'cluster',
+                            patient_strat= True,
+                            ignore=[])
+
 else:
     raise NotImplementedError
-###*********************************
-#Modified by Qinghe 21/04/2021
-time_elapsed = time.time() - start_time
-print("load dataset took {} seconds".format(time_elapsed))
-###*********************************
-
-if not os.path.isdir(args.results_dir):
-    os.mkdir(args.results_dir)
-
-args.results_dir = os.path.join(args.results_dir, str(args.exp_code) + '_s{}'.format(args.seed))
-if not os.path.isdir(args.results_dir):
-    os.mkdir(args.results_dir)
-
-if args.split_dir is None:
-    args.split_dir = os.path.join('splits', args.task+'_{}'.format(int(args.label_frac*100)))
-else:
-    args.split_dir = os.path.join('splits', args.split_dir)
-assert os.path.isdir(args.split_dir)
-
-settings.update({'split_dir': args.split_dir})
-
-
-with open(args.results_dir + '/experiment_{}.txt'.format(args.exp_code), 'w') as f:
-    print(settings, file=f)
-f.close()
-
-print("################# Settings ###################")
-for key, val in settings.items():
-    print("{}:  {}".format(key, val))        
 
 if __name__ == "__main__":
-    results = main(args)
-    print("finished!")
-    print("end script")
-
-
+     print("dataset:")
+     print(dataset)
+     print("data_dir:")
+     print(args.data_dir)
+     
+     for ckpt_idx in range(len(ckpt_paths)):
+         save_dir = args.save_dir
+         save_dir = os.path.join(save_dir, "attention_scores_" + str(folds[ckpt_idx]))
+         os.makedirs(save_dir, exist_ok=True)
+         
+         model = initiate_model(args, ckpt_paths[ckpt_idx])
+         
+         if args.feature_bags is not None:
+             feature_bags = args.feature_bags
+         else:
+             feature_bags = sorted(os.listdir(args.data_dir))
+             feature_bags = [features for features in feature_bags if features.endswith(".pt")]
+         
+         total = len(feature_bags)
+         times = 0.
+         
+         for i in range(total): 
+             print("\n\nprogress: {:.2f}, {}/{} in current model. {} out of {} models".format(i/total, i, total, ckpt_idx, len(ckpt_paths)))
+             print('processing {}'.format(feature_bags[i]))
+    
+             bag_features = torch.load(os.path.join(args.data_dir, feature_bags[i]), map_location=lambda storage, 
+                                       loc: storage.cuda(0))
+             # torch.Size([22857, 1024])
+             
+             time_elapsed = -1
+             start_time = time.time()
+             logits, Y_prob, Y_hat, A, _ = model(bag_features) # A is the matrix of attention scores (n_classes x n_patches)
+             time_elapsed = time.time() - start_time
+             times += time_elapsed
+             
+             print("logits")
+             print(logits)
+             print("Y_prob")
+             print(Y_prob)
+             print("Y_hat")
+             print(Y_hat)
+             print("A")
+             print(A.size()) # torch.Size([1, 22857])
+             print("Max:")
+             print(torch.max(A))
+             print("Min:")
+             print(torch.min(A))
+             torch.save(A, os.path.join(save_dir, "attention_score_" + feature_bags[i]))
+    
+         times /= total
+    
+         print("average time in s per slide: {}".format(times))

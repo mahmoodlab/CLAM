@@ -10,14 +10,27 @@ import pickle
 from scipy import stats
 
 from torch.utils.data import Dataset
+from torchvision import transforms
 import h5py
 
 from utils.utils import generate_split, nth
+from PIL import Image
 
-
+#Modified by Qinghe 15/05/2021, for the fast pipeline
+import openslide
 
 def save_splits(split_datasets, column_keys, filename, boolean_style=False):
-	splits = [split_datasets[i].slide_data['slide_id'] for i in range(len(split_datasets))]
+# Modfied by Qinghe 03/02/2021 for external mondor validation **************************************
+#	splits = [split_datasets[i].slide_data['slide_id'] for i in range(len(split_datasets))]
+	splits = []
+	for i in range(len(split_datasets)):
+		try: 
+			splits.append(split_datasets[i].slide_data['slide_id'])
+		except AttributeError as error:
+			print(error)
+			splits.append(pd.Series())
+# **************************************************************************************************
+        
 	if not boolean_style:
 		df = pd.concat(splits, ignore_index=True, axis=1)
 		df.columns = column_keys
@@ -25,7 +38,18 @@ def save_splits(split_datasets, column_keys, filename, boolean_style=False):
 		df = pd.concat(splits, ignore_index = True, axis=0)
 		index = df.values.tolist()
 		one_hot = np.eye(len(split_datasets)).astype(bool)
-		bool_array = np.repeat(one_hot, [len(dset) for dset in split_datasets], axis=0)
+	
+# Modfied by Qinghe 03/02/2021 for external mondor validation **************************************
+#		bool_array = np.repeat(one_hot, [len(dset) for dset in split_datasets], axis=0)
+		list_len = []
+		for dset in split_datasets:
+			try:
+				list_len.append(len(dset))
+			except TypeError as error:
+				print(error)
+				list_len.append(0)
+		bool_array = np.repeat(one_hot, list_len, axis=0)
+# **************************************************************************************************
 		df = pd.DataFrame(bool_array, index=index, columns = ['train', 'val', 'test'])
 
 	df.to_csv(filename)
@@ -53,7 +77,6 @@ class Generic_WSI_Classification_Dataset(Dataset):
 			ignore (list): List containing class labels to ignore
 		"""
 		self.label_dict = label_dict
-		self.custom_test_ids = None
 		self.num_classes=len(self.label_dict)
 		self.seed = seed
 		self.print_info = print_info
@@ -90,8 +113,6 @@ class Generic_WSI_Classification_Dataset(Dataset):
 			patient_labels.append(label)
 		
 		self.patient_data = {'case_id':patients, 'label':np.array(patient_labels)}
-
-		self.patient_data_prep()
 		self.cls_ids_prep()
 
 		if print_info:
@@ -105,18 +126,6 @@ class Generic_WSI_Classification_Dataset(Dataset):
 		self.slide_cls_ids = [[] for i in range(self.num_classes)]
 		for i in range(self.num_classes):
 			self.slide_cls_ids[i] = np.where(self.slide_data['label'] == i)[0]
-
-	def patient_data_prep(self):
-		patients = np.unique(np.array(self.slide_data['case_id'])) # get unique patients
-		patient_labels = []
-		
-		for p in patients:
-			locations = self.slide_data[self.slide_data['case_id'] == p].index.tolist()
-			assert len(locations) > 0
-			label = self.slide_data['label'][locations[0]] # get patient label
-			patient_labels.append(label)
-		
-		self.patient_data = {'case_id':patients, 'label':np.array(patient_labels)}
 
 	@staticmethod
 	def df_prep(data, label_dict, ignore, label_col):
@@ -155,7 +164,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 					'test_num': test_num,
 					'label_frac': label_frac,
 					'seed': self.seed,
-					'custom_test_ids': self.custom_test_ids
+					'custom_test_ids': custom_test_ids
 					}
 
 		if self.patient_strat:
@@ -313,7 +322,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 		df.to_csv(filename, index = False)
 
 
-class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
+class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset): # not classic MIL, but including CLAM
 	def __init__(self,
 		data_dir, 
 		**kwargs):
@@ -322,7 +331,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 		self.data_dir = data_dir
 		self.use_h5 = False
 
-	def load_from_h5(self, toggle):
+	def load_from_h5(self, toggle): # could be overwritten (back to False) when using return_splits (so to change in Generic_Split)
 		self.use_h5 = toggle
 
 	def __getitem__(self, idx):
@@ -350,16 +359,179 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 
 class Generic_Split(Generic_MIL_Dataset):
 	def __init__(self, slide_data, data_dir=None, num_classes=2):
-		self.use_h5 = False
+		self.use_h5 = False # to change for custom ## Qinghe: to change to for 'main.py' load from h5 if pt files not working (eg. torch version after 1.6 zip format)
 		self.slide_data = slide_data
-		self.data_dir = data_dir
+		self.data_dir = data_dir # to change for custom
 		self.num_classes = num_classes
-		self.slide_cls_ids = [[] for i in range(self.num_classes)]
+		self.slide_cls_ids = [[] for i in range(self.num_classes)] # list of 2 arrays (label 0 and 1) to show the stratified id of the slides 
 		for i in range(self.num_classes):
 			self.slide_cls_ids[i] = np.where(self.slide_data['label'] == i)[0]
 
 	def __len__(self):
 		return len(self.slide_data)
 		
+###*********************************
+#Modified by Qinghe
+class Dataset_from_Split(Generic_Split):
+	def __init__(self, tile_IDs, labels, trnsfrms, **kwargs):
+	 	# Initialization
+		super(Dataset_from_Split, self).__init__(**kwargs)
+		self.load_from_h5(True)
+		self.tile_IDs = tile_IDs #list
+		self.labels = labels #list
+		self.trnsfrms = trnsfrms
 
+	def __len__(self):
+ 	# Denotes the total number of samples
+		return len(self.tile_IDs)
+	
+	def normalize(self):
+		if self.trnsfrms == 'imagenet': # pixel-wise standardization per channel
+			mean = (0.485, 0.456, 0.406)
+			std = (0.229, 0.224, 0.225)
+			
+			trnsfrms_val = transforms.Compose(
+				[
+				 transforms.ToTensor(),
+				 transforms.Normalize(mean = mean, std = std)
+				]
+			)
+			
+		elif self.trnsfrms == None:
+			trnsfrms_val = transforms.Compose(
+				[
+				 transforms.ToTensor(),
+				]
+			)
+	
+		else: # PyTorch quite often just use 0.5, 0.5, 0.5 on many datasets to rerange them to [-1, +1]
+			mean = (0.5,0.5,0.5)
+			std = (0.5,0.5,0.5)
+			
+			trnsfrms_val = transforms.Compose(
+				[
+				 transforms.ToTensor(),
+				 transforms.Normalize(mean = mean, std = std)
+				]
+			)
 
+		return trnsfrms_val
+
+	def __getitem__(self, index):
+ 	# Generates one sample of data and its label(s, here is label, but could be pixel-level labels and mutli-labels)
+	 # Select sample
+		ID = self.tile_IDs[index]
+
+	 # Load data and get label
+		with h5py.File(os.path.join(self.data_dir, ID.split(":")[0]+'.h5'),'r') as hdf5_file:
+			img = hdf5_file['imgs'][int(ID.split(":")[1])]
+			coords = hdf5_file['coords'][int(ID.split(":")[1])]
+			
+		img = Image.fromarray(img)
+		self.roi_transforms = self.normalize()
+		img = self.roi_transforms(img).unsqueeze(0) # unsqueeze(img, 0): [3, 256, 256] --> (1, 3, 256, 256)
+						
+# 		img = torch.from_numpy(img)
+		label = self.labels[index]
+
+		return img, label, coords, ID
+###*********************************
+        
+###*********************************
+#Modified by Qinghe 15/05/2021, for the fast pipeline
+class Dataset_from_Split_FP(Generic_Split):
+	def __init__(self, tile_IDs, labels, trnsfrms, 
+              data_slide_dir=None,
+              custom_downsample=1,
+              target_patch_size=-1, # at actual magnification, rule 'custom_downsample'
+              **kwargs):
+        
+	 	# Initialization
+		super(Dataset_from_Split_FP, self).__init__(**kwargs)
+		self.load_from_h5(True)
+		self.tile_IDs = tile_IDs #list
+		self.labels = labels #list
+		self.trnsfrms = trnsfrms
+        
+		self.data_slide_dir = data_slide_dir
+		self.custom_downsample = custom_downsample
+		self.target_patch_size = target_patch_size
+
+	def __len__(self):
+ 	# Denotes the total number of samples
+		return len(self.tile_IDs)
+	
+	def normalize(self):
+		if self.trnsfrms == 'imagenet': # pixel-wise standardization per channel
+			mean = (0.485, 0.456, 0.406)
+			std = (0.229, 0.224, 0.225)
+			
+			trnsfrms_val = transforms.Compose(
+				[
+				 transforms.ToTensor(),
+				 transforms.Normalize(mean = mean, std = std)
+				]
+			)
+			
+		elif self.trnsfrms == None:
+			trnsfrms_val = transforms.Compose(
+				[
+				 transforms.ToTensor(),
+				]
+			)
+	
+		else: # PyTorch quite often just use 0.5, 0.5, 0.5 on many datasets to rerange them to [-1, +1]
+			mean = (0.5,0.5,0.5)
+			std = (0.5,0.5,0.5)
+			
+			trnsfrms_val = transforms.Compose(
+				[
+				 transforms.ToTensor(),
+				 transforms.Normalize(mean = mean, std = std)
+				]
+			)
+
+		return trnsfrms_val
+
+	def __getitem__(self, index):
+ 	# Generates one sample of data and its label(s, here is label, but could be pixel-level labels and mutli-labels)
+	 # Select sample
+		ID = self.tile_IDs[index]
+
+	 # Load data and get label
+		with h5py.File(os.path.join(self.data_dir, ID.split(":")[0]+'.h5'),'r') as hdf5_file:
+			coords = hdf5_file['coords'][int(ID.split(":")[1])]
+			patch_level = hdf5_file['coords'].attrs['patch_level']
+			patch_size = hdf5_file['coords'].attrs['patch_size']
+            
+        #unlike in __init__, here we shouldn't modify self.target_patch_size or self.custom_downsample, should keep the pass in values
+		if patch_size == self.target_patch_size:
+			target_patch_size = None
+		elif self.target_patch_size > 0:
+			target_patch_size = (self.target_patch_size, ) * 2
+		elif self.custom_downsample > 1:
+ 			target_patch_size = (patch_size // self.custom_downsample, ) * 2
+		else:
+			target_patch_size = None
+			
+            
+		###********* 15/05/2021, improve to remove the input --slide_ext
+        #slide_file_path = os.path.join(args.data_slide_dir, bag_name.replace('.h5', args.slide_ext))
+        # priority: NOT, AND, OR!!
+		slide_file_path = os.path.join(self.data_slide_dir, [sli for sli in os.listdir(self.data_slide_dir) if (sli.endswith('.ndpi') or 
+                                                       sli.endswith('.svs')) and sli.startswith(ID.split(":")[0])][0])
+        ###*********
+		with openslide.open_slide(slide_file_path) as wsi:
+			img = wsi.read_region(coords, patch_level, (patch_size, patch_size)).convert('RGB')
+            
+		if target_patch_size is not None:
+			img = img.resize(target_patch_size) # (256, 256, 3)
+
+		self.roi_transforms = self.normalize()
+		img = self.roi_transforms(img).unsqueeze(0) # unsqueeze(img, 0): [3, 256, 256] --> (1, 3, 256, 256)
+						
+# 		img = torch.from_numpy(img)
+		label = self.labels[index]
+
+		return img, label, coords, ID
+###*********************************

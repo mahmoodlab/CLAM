@@ -119,7 +119,7 @@ dependencies:
   - readline=8.0=h7b6447c_0
   - scipy=1.4.1=py37h0b6359f_0
   - send2trash=1.5.0=py37_0
-  - setuptools=46.1.1=py37_0
+  - setuptools=45.3.0=py37_0
   - sip=4.19.8=py37hf484d3e_0
   - six=1.14.0=py37_0
   - sqlite=3.31.1=h7b6447c_0
@@ -211,7 +211,6 @@ dependencies:
     - pytest==4.6.2
     - pytest-cov==2.7.1
     - python-utils==2.3.0
-    - pytiff==0.8.1
     - pywavelets==1.1.1
     - pyyaml==3.13
     - requests==2.22.0
@@ -239,5 +238,6 @@ dependencies:
     - websockets==8.1
     - zarr==2.3.2
     - zope-interface==4.6.0
+prefix: /home/fedshyvana/anaconda3/envs/deep_learning
 prefix: /home/fedshyvana/anaconda3/envs/deep_learning
 

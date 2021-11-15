@@ -16,23 +16,41 @@ def stitching(file_path, downscale = 64):
 	
 	return heatmap, total_time
 
-def segment(WSI_object, seg_params, filter_params):
+####********************************************************************
+#Modified by Qinghe 23/04/2021
+#def segment(WSI_object, seg_params, filter_params):
+def segment(WSI_object, seg_params, filter_params, annotations, annotation_dir, slide):
+ ####********************************************************************
 	### Start Seg Timer
 	start_time = time.time()
 
 	# Segment
-	WSI_object.segmentTissue(**seg_params, filter_params=filter_params)
+    ###*********************************
+    ### Modified by Qinghe 23/04/2021
+#    WSI_object.segmentTissue(**seg_params, filter_params=filter_params)
+	WSI_object.segmentTissue(**seg_params, filter_params=filter_params, annotations=annotations, annotation_dir=annotation_dir, 
+                          slide_name=slide)
+    ###*********************************
 
 	### Stop Seg Timers
 	seg_time_elapsed = time.time() - start_time   
 	return WSI_object, seg_time_elapsed
 
-def patching(WSI_object, **kwargs):
+####********************************************************************
+#Modified by Qinghe 23/04/2021
+#def patching(WSI_object, **kwargs):
+def patching(WSI_object, annotations, **kwargs):
+####********************************************************************
+    
 	### Start Patch Timer
 	start_time = time.time()
 
 	# Patch
-	file_path = WSI_object.createPatches_bag_hdf5(**kwargs, save_coord=True)
+    ####********************************************************************
+    #Modified by Qinghe 23/04/2021
+    #file_path = WSI_object.createPatches_bag_hdf5(**kwargs, save_coord=True)
+	file_path = WSI_object.createPatches_bag_hdf5(**kwargs, save_coord=True, annotations=annotations)
+    ####********************************************************************
 
 	### Stop Patch Timer
 	patch_time_elapsed = time.time() - start_time
@@ -67,7 +85,11 @@ def initialize_df(slides, seg_params, filter_params, vis_params, patch_params):
 		})
 	return df
 
-def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_dir, 
+####********************************************************************
+#Modified by Qinghe 23/04/2021
+#def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_dir, 
+def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_dir, annotation_dir, 
+####********************************************************************
 				  patch_size = 256, step_size = 256, custom_downsample=1, 
 				  seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False},
 				  filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':10}, 
@@ -77,9 +99,11 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 				  use_default_params = False, 
 				  seg = False, save_mask = True, 
 				  stitch= False, 
-				  patch = False, auto_skip=True, process_list = None):
-	
-
+                  ####********************************************************************
+                  #Modified by Qinghe 23/04/2021
+#				  patch = False, auto_skip=True, process_list = None):
+				  patch = False, auto_skip=True, process_list = None, annotations=False):
+                  ####********************************************************************
 
 	slides = sorted(os.listdir(source))
 	slides = [slide for slide in slides if os.path.isfile(os.path.join(source, slide))]
@@ -145,7 +169,9 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 			
 			else:	
 				wsi = WSI_object.getOpenSlide()
-				best_level = wsi.get_best_level_for_downsample(64)
+				best_level = wsi.get_best_level_for_downsample(64) # "closest level": actually next larger (svs) or equally sized level (ndpi) in the slide. 
+    #svs normally has less levels and level_downsamples not int. Thus for svs next largest level with a downsample less than user's downsample. 
+    #ndpi normally has levels of 2^n of n = 0-7 or 8, so always the exact size.
 				current_vis_params['vis_level'] = best_level
 
 		if current_seg_params['seg_level'] < 0:
@@ -154,9 +180,9 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 			
 			else:
 				wsi = WSI_object.getOpenSlide()
-				best_level = wsi.get_best_level_for_downsample(64)
+				best_level = wsi.get_best_level_for_downsample(64) # uses the downsample in the WSI closest to 64x downsample
 				current_seg_params['seg_level'] = best_level
-
+        
 		w, h = WSI_object.level_dim[current_seg_params['seg_level']] 
 		if w * h > 1e8:
 			print('level_dim {} x {} is likely too large for successful segmentation, aborting'.format(w, h))
@@ -169,10 +195,16 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
 		seg_time_elapsed = -1
 		if seg:
-			WSI_object, seg_time_elapsed = segment(WSI_object, current_seg_params, current_filter_params) 
+            ###*********************************
+            ### Modified by Qinghe 23/04/2021
+#            WSI_object, seg_time_elapsed = segment(WSI_object, current_seg_params, current_filter_params)
+			WSI_object, seg_time_elapsed = segment(WSI_object, current_seg_params, current_filter_params, annotations, annotation_dir, 
+                                          slide) 
+            ###*********************************
 
 		if save_mask:
 			mask = WSI_object.visWSI(**current_vis_params)
+#			mask.show()
 			mask_path = os.path.join(mask_save_dir, slide_id+'.png')
 			mask.save(mask_path)
 
@@ -180,7 +212,11 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 		if patch:
 			current_patch_params.update({'patch_level': patch_level, 'patch_size': patch_size, 'step_size': step_size, 
 										 'save_path': patch_save_dir, 'custom_downsample': custom_downsample})
-			file_path, patch_time_elapsed = patching(WSI_object = WSI_object, **current_patch_params)
+            ###*********************************
+            ### Modified by Qinghe 23/04/2021
+            # file_path, patch_time_elapsed = patching(WSI_object = WSI_object, **current_patch_params)
+			file_path, patch_time_elapsed = patching(WSI_object = WSI_object, annotations=annotations, **current_patch_params)
+            ###*********************************
 		
 		stitch_time_elapsed = -1
 		if stitch:
@@ -209,45 +245,110 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 		
 	return seg_times, patch_times
 
+#%%
 parser = argparse.ArgumentParser(description='seg and patch')
 parser.add_argument('--source', type = str,
 					help='path to folder containing raw wsi image files')
 parser.add_argument('--step_size', type = int, default=256,
-					help='step_size')
+                    ###*********************************
+                    #Modified by Qinghe 21/04/2021
+#                    help='step_size')
+					help='step size for x and y at the actual patching level')
+                    ###*********************************
 parser.add_argument('--patch_size', type = int, default=256,
-					help='patch_size')
+                    ###*********************************
+                    #Modified by Qinghe 21/04/2021
+#					help='patch_size')
+					help='patch_size for x and y at the actual patching level')
+                    ###*********************************
 parser.add_argument('--patch', default=False, action='store_true')
 parser.add_argument('--seg', default=False, action='store_true')
 parser.add_argument('--stitch', default=False, action='store_true')
 parser.add_argument('--no_auto_skip', default=True, action='store_false')
-parser.add_argument('--save_dir', type = str,
+parser.add_argument('--save_dir', type=str, default='./results',
 					help='directory to save processed data')
 parser.add_argument('--preset', default=None, type=str,
 					help='predefined profile of default segmentation and filter parameters (.csv)')
 parser.add_argument('--patch_level', type=int, default=0, 
-					help='downsample level at which to patch')
+                    ###*********************************
+                    #Modified by Qinghe 21/04/2021
+					#help='downsample level at which to patch')
+					help='native downsample level at which to patch (could combine with custom_downsample)')
+                    ###*********************************
 parser.add_argument('--custom_downsample', type= int, choices=[1,2], default=1, 
 					help='custom downscale when native downsample is not available (only tested w/ 2x downscale)')
 parser.add_argument('--process_list',  type = str, default=None,
 					help='name of list of images to process with parameters (.csv)')
+###*********************************
+### Modified by Qinghe 04/2021
+parser.add_argument('--mask_save_dir',  type = str, default=None,
+					help='directory to save segmentated tissue mask')
+parser.add_argument('--patch_save_dir',  type = str, default=None,
+					help='directory to save patches')
+parser.add_argument('--stitch_save_dir',  type = str, default=None,
+					help='directory to save stitched png')
+parser.add_argument('--use_annotations', default=False, action='store_true',
+                    help='import tumor annotation (txt)')
+parser.add_argument('--annotation_dir',  type = str, default=None,
+					help='directory of annotation coordinate file (.txt)')
+
+args = parser.parse_args()
+###*********************************
+
+#%% Modified by Qinghe 04/2021
+## Parameters for test
+#parser = argparse.ArgumentParser(description='seg and patch')
+#args = parser.parse_args()
+#
+#args.source = "/media/visiopharm5/WDRed(backup)/clam_extension/data/data_tcga_hcc" #'./results/patches_tumor'
+#args.step_size = 256
+#args.patch_size = 256
+#args.patch = True
+#args.seg = True
+#args.stitch = True
+#args.no_auto_skip = True
+#args.save_dir = 'results'
+#args.preset = None
+#args.patch_level = 0
+#args.custom_downsample = 2 # most are 40x
+#args.process_list = 'process_list_test.csv'
+#args.mask_save_dir = '/media/visiopharm5/WDRed(backup)/clam_extension/results/test/masks_test'
+#args.patch_save_dir = '/media/visiopharm5/WDRed(backup)/clam_extension/results/test/patches_test'
+#args.stitch_save_dir = '/media/visiopharm5/WDRed(backup)/clam_extension/results/test/stitches_test'
+#args.use_annotations = False
+#args.annotation_dir = '/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/data/annotations'
+
+#%%
 
 if __name__ == '__main__':
-	args = parser.parse_args()
+####********************************************************************
+#     Modified by Qinghe 21/04/2021
+#	args = parser.parse_args()
 
-	patch_save_dir = os.path.join(args.save_dir, 'patches')
-	mask_save_dir = os.path.join(args.save_dir, 'masks')
-	stitch_save_dir = os.path.join(args.save_dir, 'stitches')
+#    patch_save_dir = os.path.join(args.save_dir, 'patches')
+#	mask_save_dir = os.path.join(args.save_dir, 'masks')
+#	stitch_save_dir = os.path.join(args.save_dir, 'stitches')
+	if args.patch_save_dir is None:
+		patch_save_dir = os.path.join(args.save_dir, 'patches')
+	else: 
+		patch_save_dir = args.patch_save_dir
+        
+	if args.mask_save_dir is None:
+		mask_save_dir = os.path.join(args.save_dir, 'masks')
+	else: 
+		mask_save_dir = args.mask_save_dir
+        
+	if args.stitch_save_dir is None:
+		stitch_save_dir = os.path.join(args.save_dir, 'stitches')
+	else: 
+		stitch_save_dir = args.stitch_save_dir
+####********************************************************************
 
 	if args.process_list:
 		process_list = os.path.join(args.save_dir, args.process_list)
 
 	else:
 		process_list = None
-
-	print('source: ', args.source)
-	print('patch_save_dir: ', patch_save_dir)
-	print('mask_save_dir: ', mask_save_dir)
-	print('stitch_save_dir: ', stitch_save_dir)
 	
 	directories = {'source': args.source, 
 				   'save_dir': args.save_dir,
@@ -255,9 +356,11 @@ if __name__ == '__main__':
 				   'mask_save_dir' : mask_save_dir, 
 				   'stitch_save_dir': stitch_save_dir} 
 
+
 	for key, val in directories.items():
 		print("{} : {}".format(key, val))
-		os.makedirs(val, exist_ok=True)
+		if key not in ['source']:
+			os.makedirs(val, exist_ok=True)
 
 	seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False}
 	filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8}
@@ -290,4 +393,10 @@ if __name__ == '__main__':
 											seg = args.seg,  use_default_params=False, save_mask = True, 
 											stitch= args.stitch, custom_downsample = args.custom_downsample, 
 											patch_level=args.patch_level, patch = args.patch,
-											process_list = process_list, auto_skip=args.no_auto_skip)
+                                            ####********************************************************************
+                                            #Modified by Qinghe 23/04/2021
+#											process_list = process_list, auto_skip=args.no_auto_skip)
+                                            process_list = process_list, auto_skip=args.no_auto_skip, 
+                                            annotations=args.use_annotations, annotation_dir=args.annotation_dir)
+                                            ####********************************************************************
+    

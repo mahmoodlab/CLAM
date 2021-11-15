@@ -3,6 +3,8 @@ import torch
 import numpy as np
 import torch.nn as nn
 import pdb
+import os
+import h5py
 
 import torch
 import numpy as np
@@ -32,10 +34,22 @@ class SubsetSequentialSampler(Sampler):
 	def __len__(self):
 		return len(self.indices)
 
-def collate_MIL(batch):
+def collate_MIL(batch): # Qinghe: item is [features, label] from datasets/dataset_generic.Generic_MIL_Dataset.__getitem__
 	img = torch.cat([item[0] for item in batch], dim = 0)
 	label = torch.LongTensor([item[1] for item in batch])
 	return [img, label]
+
+###*********************************
+#Modified by Qinghe 10/11/2021, data augmentation
+def collate_MIL_augm(batch): # Qinghe: item is [features, label] from datasets/dataset_generic.Generic_MIL_Dataset.__getitem__
+    import random
+    augmRandom = random.Random(1)
+    for item in batch:
+        list_coords = [i*8+idx for i, idx in enumerate(augmRandom.choices(range(0, 8), k=len(item[0])//8))]
+        img = torch.cat([item[0][list_coords]], dim = 0)
+    label = torch.LongTensor([item[1] for item in batch])
+    return [img, label]
+###*********************************
 
 def collate_features(batch):
 	img = torch.cat([item[0] for item in batch], dim = 0)
@@ -43,12 +57,16 @@ def collate_features(batch):
 	return [img, coords]
 
 
-def get_simple_loader(dataset, batch_size=1):
+def get_simple_loader(dataset, batch_size=1): # called during validation
 	kwargs = {'num_workers': 4, 'pin_memory': False} if device.type == "cuda" else {}
 	loader = DataLoader(dataset, batch_size=batch_size, sampler = sampler.SequentialSampler(dataset), collate_fn = collate_MIL, **kwargs)
 	return loader 
 
-def get_split_loader(split_dataset, training = False, testing = False, weighted = False):
+###*********************************
+#Modified by Qinghe 11/11/2021, data augmentation
+#def get_split_loader(split_dataset, training = False, testing = False, weighted = False):
+def get_split_loader(split_dataset, training = False, testing = False, weighted = False, train_augm = False):
+###*********************************
 	"""
 		return either the validation loader or training loader 
 	"""
@@ -56,9 +74,21 @@ def get_split_loader(split_dataset, training = False, testing = False, weighted 
 	if not testing:
 		if training:
 			if weighted:
-				weights = make_weights_for_balanced_classes_split(split_dataset)
-				loader = DataLoader(split_dataset, batch_size=1, sampler = WeightedRandomSampler(weights, len(weights)), collate_fn = collate_MIL, **kwargs)	
+				weights = make_weights_for_balanced_classes_split(split_dataset) # eg. [0.4, 0.4, 0.6, 0.6, 0.4, 0.4, 0.6, ...]
+				# weighting strategy is to ramdomly sample slides with their probabilities (higher for small class) + replacement
+				# That is to say, Cluster High slides could be sampled twice while Cluster Low ones could be unused. Keep the total dataset size!
+				# So maybe adding random transform could help with the Cluster Low overwhelmed phenomena (class imbalance)
+                ###*********************************
+                #Modified by Qinghe 11/11/2021, data augmentation
+				#loader = DataLoader(split_dataset, batch_size=1, sampler = WeightedRandomSampler(weights, len(weights)), collate_fn = collate_MIL, **kwargs)	
+				if train_augm:
+					loader = DataLoader(split_dataset, batch_size=1, sampler = WeightedRandomSampler(weights, len(weights)), collate_fn = collate_MIL_augm, **kwargs)
+				else:
+					loader = DataLoader(split_dataset, batch_size=1, sampler = WeightedRandomSampler(weights, len(weights)), collate_fn = collate_MIL, **kwargs)	
+                ###*********************************
+
 			else:
+				# without replacement, then sample from a shuffled dataset
 				loader = DataLoader(split_dataset, batch_size=1, sampler = RandomSampler(split_dataset), collate_fn = collate_MIL, **kwargs)
 		else:
 			loader = DataLoader(split_dataset, batch_size=1, sampler = SequentialSampler(split_dataset), collate_fn = collate_MIL, **kwargs)
@@ -139,18 +169,19 @@ def nth(iterator, n, default=None):
 	else:
 		return next(islice(iterator,n, None), default)
 
-def calculate_error(Y_hat, Y):
-	error = 1. - Y_hat.float().eq(Y.float()).float().mean().item()
+def calculate_error(Y_hat, Y): # for clam, Y_hat and Y are 1-element list since batch size = 1
+	error = 1. - Y_hat.float().eq(Y.float()).float().mean().item() # torch.eq(): element-wise equality
 
-	return error
+	return error # 0 for equal, otherwise 1
 
 def make_weights_for_balanced_classes_split(dataset):
-	N = float(len(dataset))                                           
-	weight_per_class = [N/len(dataset.slide_cls_ids[c]) for c in range(len(dataset.slide_cls_ids))]                                                                                                     
-	weight = [0] * int(N)                                           
-	for idx in range(len(dataset)):   
-		y = dataset.getlabel(idx)                        
-		weight[idx] = weight_per_class[y]                                  
+	N = float(len(dataset)) # N: training slide account. dataset: a dataset object. 
+#	dataset.slide_cls_ids): list of array, each array contains the slide ids of a class: 0 , 1 , ...                             
+	weight_per_class = [N/len(dataset.slide_cls_ids[c]) for c in range(len(dataset.slide_cls_ids))]                                                                                            
+	weight = [0] * int(N) # a zero list waiting to overwritten by the weights for each slide                                         
+	for idx in range(len(dataset)): # slide index
+		y = dataset.getlabel(idx) # class label              
+		weight[idx] = weight_per_class[y] # match the weight and the slide     
 
 	return torch.DoubleTensor(weight)
 
