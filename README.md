@@ -130,16 +130,17 @@ Results
 <img src="docs/vis.png" width="1000px" align="below" />
 
 Workflow
-===========
+
 <img src="docs/workflow.png" width="1000px" align="below" />
 
-### Part 1. Gene expression clustering 
+Part 1. Gene expression clustering 
+===========
 **To generate labels for Whole Slide Images (WSIs)**
 
+Part 2. Deep learning 
+===========
 
-# CLAM and ShuffleNet
-
-## Workflow 1: CLAM
+## Approach 1: CLAM
 
 **Clustering-constrained Attention Multiple Instance Learning**
 
@@ -229,7 +230,11 @@ CUDA_VISIBLE_DEVICES=0 python attention_score.py --drop_out --k 10 --results_dir
 CUDA_VISIBLE_DEVICES=0 python attention_map.py --save_exp_code tcga_hcc_tumor_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1_cv --fold 5  --downscale 4  --snapshot --grayscale --colormap --blended --data_root_dir ./results/patches_tumor
 ```
 ***
-## Workflow 2: ShuffleNet
+
+## Approach 2: Classic MIL
+
+
+## Approach 3: Patch-based method
 ### Workflow proposed in Dr. Kather's [pan-cancer paper](https://www.nature.com/articles/s43018-020-0087-6)
 #### Training
 For this workflow, we have to create a new conda environment. Newer version packages are needed to use some pytorch pre-trained models.
