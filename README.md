@@ -77,7 +77,7 @@ Results
 	</tbody>
 </table>
 
-**Best-fold AUROC in the external validation series (private dataset from APHP Henri Mondor):**
+**AUROC (of best-fold model) in the external validation series (private dataset from APHP Henri Mondor):**
 
 <table  align="center">
 	<tbody>
@@ -126,11 +126,12 @@ Results
 	</tbody>
 </table>
 
-**Visualization/exlainability:**
+**Visualization / exlainability:**
 <img src="docs/vis.png" width="1000px" align="below" />
 
 Workflow
 ===========
+<img src="docs/workflow.png" width="1000px" align="below" />
 
 ### Part 1. Gene expression clustering 
 **To generate labels for Whole Slide Images (WSIs)**
