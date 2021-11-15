@@ -130,7 +130,7 @@ Results
 <img src="docs/vis.png" width="1000px" align="below" />
 
 Workflow
-
+===========
 <img src="docs/workflow.png" width="1000px" align="below" />
 
 Part 1. Gene expression clustering 
