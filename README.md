@@ -7,72 +7,72 @@ Results
 <table  align="center">
 	<tbody>
 		<tr>
-			<td align="center" valign="center" rowspan="2"><b>Gene signature</td>
-			<td align="center" valign="center" colspan="2"><b>Patch-based</td>
-			<td align="center" valign="center" colspan="2"><b>Classic MIL</td>
-			<td align="center" valign="center" colspan="2"><b>CLAM</td>
+			<td align="center" valign="center" rowspan="2"><b><sub>Gene signature<sub></td>
+			<td align="center" valign="center" colspan="2"><b><sub>Patch-based<sub></td>
+			<td align="center" valign="center" colspan="2"><b><sub>Classic MIL<sub></td>
+			<td align="center" valign="center" colspan="2"><b><sub>CLAM<sub></td>
 		</tr>
 		<tr>
-			<td align="center" valign="center"><b>Best fold</td>
-			<td align="center" valign="center"><b>Mean ± sd</td>
-			<td align="center" valign="center"><b>Best fold</td>
-			<td align="center" valign="center"><b>Mean ± sd</td>
-			<td align="center" valign="center"><b>Best fold</td>
-			<td align="center" valign="center"><b>Mean ± sd</td>
+			<td align="center" valign="center"><b><sub>Best fold<sub></td>
+			<td align="center" valign="center"><b><sub>Mean ± sd<sub></td>
+			<td align="center" valign="center"><b><sub>Best fold<sub></td>
+			<td align="center" valign="center"><b><sub>Mean ± sd<sub></td>
+			<td align="center" valign="center"><b><sub>Best fold<sub></td>
+			<td align="center" valign="center"><b><sub>Mean ± sd<sub></td>
 		</tr>
 		<tr>
-			<td align="center" valign="center"><b>6G Interferon Gamma</td>
-			<td align="center" valign="center">0.661</td>
-			<td align="center" valign="center">0.560 ± 0.067</td>
-			<td align="center" valign="center">0.758</td>
-			<td align="center" valign="center">0.630 ± 0.078</td>
-			<td align="center" valign="center">0.780</td>
-			<td align="center" valign="center">0.635 ± 0.097</td>
+			<td align="center" valign="center"><b><sub>6G Interferon Gamma<sub></td>
+			<td align="center" valign="center"><sub>0.661<sub></td>
+			<td align="center" valign="center"><sub>0.560 ± 0.067<sub></td>
+			<td align="center" valign="center"><sub>0.758<sub></td>
+			<td align="center" valign="center"><sub>0.630 ± 0.078<sub></td>
+			<td align="center" valign="center"><sub>0.780<sub></td>
+			<td align="center" valign="center"><sub>0.635 ± 0.097<sub></td>
 		</tr>
 		<tr>
-			<td align="center" valign="center"><b>Gajewski 13G Inflammatory</td>
-			<td align="center" valign="center"><b>0.809</td>
-			<td align="center" valign="center"><b>0.688 ± 0.062</td>
-			<td align="center" valign="center"><b>0.893</td>
-			<td align="center" valign="center"><b>0.694 ± 0.125</td>
-			<td align="center" valign="center"><b>0.914</td>
-			<td align="center" valign="center"><b>0.728 ± 0.096</td>
+			<td align="center" valign="center"><b><sub>Gajewski 13G Inflammatory<sub></td>
+			<td align="center" valign="center"><b><sub>0.809<sub></td>
+			<td align="center" valign="center"><b><sub>0.688 ± 0.062<sub></td>
+			<td align="center" valign="center"><b><sub>0.893<sub></td>
+			<td align="center" valign="center"><b><sub>0.694 ± 0.125<sub></td>
+			<td align="center" valign="center"><b><sub>0.914<sub></td>
+			<td align="center" valign="center"><b><sub>0.728 ± 0.096<sub><sub></td>
 		</tr>
 		<tr>
-			<td align="center" valign="center"><b>Inflammatory</td>
-			<td align="center" valign="center">0.706</td>
-			<td align="center" valign="center">0.580 ± 0.077</td>
-			<td align="center" valign="center">0.806</td>
-			<td align="center" valign="center">0.641 ± 0.123</td>
-			<td align="center" valign="center">0.796</td>
-			<td align="center" valign="center">0.665 ± 0.081</td>
+			<td align="center" valign="center"><b><sub>Inflammatory<sub></td>
+			<td align="center" valign="center"><sub>0.706<sub></td>
+			<td align="center" valign="center"><sub>0.580 ± 0.077<sub></td>
+			<td align="center" valign="center"><sub>0.806<sub></td>
+			<td align="center" valign="center"><sub>0.641 ± 0.123<sub></td>
+			<td align="center" valign="center"><sub>0.796<sub></td>
+			<td align="center" valign="center"><sub>0.665 ± 0.081<sub></td>
 		</tr>
 		<tr>
-			<td align="center" valign="center"><b>Interferon Gamma biology</td>
-			<td align="center" valign="center">0.783</td>
-			<td align="center" valign="center">0.561 ± 0.119</td>
-			<td align="center" valign="center">0.677</td>
-			<td align="center" valign="center">0.610 ± 0.051</td>
-			<td align="center" valign="center">0.822</td>
-			<td align="center" valign="center">0.674 ± 0.102</td>
+			<td align="center" valign="center"><b><sub>Interferon Gamma biology<sub></td>
+			<td align="center" valign="center"><sub>0.783<sub></td>
+			<td align="center" valign="center"><sub>0.561 ± 0.119<sub></td>
+			<td align="center" valign="center"><sub>0.677<sub></td>
+			<td align="center" valign="center"><sub>0.610 ± 0.051<sub></td>
+			<td align="center" valign="center"><sub>0.822<sub></td>
+			<td align="center" valign="center"><sub>0.674 ± 0.102<sub></td>
 		</tr>
 		<tr>
-			<td align="center" valign="center"><b>Ribas 10G Inflammatory</td>
-			<td align="center" valign="center">0.727</td>
-			<td align="center" valign="center">0.640 ± 0.074</td>
-			<td align="center" valign="center">0.726</td>
-			<td align="center" valign="center">0.618 ± 0.065</td>
-			<td align="center" valign="center">0.806</td>
-			<td align="center" valign="center">0.669 ± 0.067</td>
+			<td align="center" valign="center"><b><sub>Ribas 10G Inflammatory<sub></td>
+			<td align="center" valign="center"><sub>0.727<sub></td>
+			<td align="center" valign="center"><sub>0.640 ± 0.074<sub></td>
+			<td align="center" valign="center"><sub>0.726<sub></td>
+			<td align="center" valign="center"><sub>0.618 ± 0.065<sub></td>
+			<td align="center" valign="center"><sub>0.806<sub></td>
+			<td align="center" valign="center"><sub>0.669 ± 0.067<sub></td>
 		</tr>
 		<tr>
-			<td align="center" valign="center"><b>T cell exhaustion</td>
-			<td align="center" valign="center">0.661</td>
-			<td align="center" valign="center">0.543 ± 0.073</td>
-			<td align="center" valign="center">0.788</td>
-			<td align="center" valign="center">0.606 ± 0.086</td>
-			<td align="center" valign="center">0.788</td>
-			<td align="center" valign="center">0.577 ± 0.092</td>
+			<td align="center" valign="center"><b><sub>T cell exhaustion<sub></td>
+			<td align="center" valign="center"><sub>0.661<sub></td>
+			<td align="center" valign="center"><sub>0.543 ± 0.073<sub><sub></td>
+			<td align="center" valign="center"><sub>0.788<sub></td>
+			<td align="center" valign="center"><sub>0.606 ± 0.086<sub></td>
+			<td align="center" valign="center"><sub>0.788<sub></td>
+			<td align="center" valign="center"><sub>0.577 ± 0.092<sub></td>
 		</tr>
 	</tbody>
 </table>
@@ -238,6 +238,7 @@ CUDA_VISIBLE_DEVICES=0 python train_customed_models.py --early_stopping --patien
 ```shell
 CUDA_VISIBLE_DEVICES=0 python eval_custom.py --batch_size 128 --k 10 --k_start -1 --k_end 10 --data_dir ./results/patches_tumor --results_dir ./results/training_custom --models_exp_code tcga_hcc_tumor_349_Inflammatory_cv_highvsrest_622_shufflenet_s1 --save_exp_code tcga_hcc_tumor_349_Inflammatory_cv_highvsrest_622_shufflenet_s1_cv --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type shufflenet
 ```
+
 
 
 
