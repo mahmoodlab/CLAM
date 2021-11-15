@@ -100,10 +100,10 @@ Results
 			<td align="center" valign="center"><sub>0.810<sub></td>
 		</tr>
 		<tr>
-			<td align="center" valign="center"><b>Inflammatory<sub></td>
-			<td align="center" valign="center">0.657<sub></td>
-			<td align="center" valign="center">0.816<sub></td>
-			<td align="center" valign="center">0.850<sub></td>
+			<td align="center" valign="center"><b><sub>Inflammatory<sub></td>
+			<td align="center" valign="center"><sub>0.657<sub></td>
+			<td align="center" valign="center"><sub>0.816<sub></td>
+			<td align="center" valign="center"><sub>0.850<sub></td>
 		</tr>
 		<tr>
 			<td align="center" valign="center"><b><sub>Interferon Gamma biology<sub></td>
@@ -131,8 +131,9 @@ Results
 
 Workflow
 ===========
-## Part 1. Gene expression clustering 
-### -- generate labels for Whole Slide Images (WSIs)
+
+### Part 1. Gene expression clustering 
+**To generate labels for Whole Slide Images (WSIs)**
 
 
 # CLAM and ShuffleNet
