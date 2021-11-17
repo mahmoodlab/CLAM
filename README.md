@@ -147,14 +147,12 @@ Workflow
 ===========
 <img src="docs/workflow.png" width="1000px" align="below" />
 
-Part 1. Gene expression clustering 
-===========
+## Part 1. Gene expression clustering 
 ***To generate labels for Whole Slide Images (WSIs)***
 1. Process TCGA FPKM data with **gene_clust/codes/tcga_fpkm_processing.ipynb**
 2. Perform hierarchical clustering with **gene_clust/codes/PlotHeatmapGeneSignature.R** (to reproduce the heatmap). Or using Python with **gene_clust/codes/tcga_fpkm_clustering.ipynb** (to get the same clustering results)
 
-Part 2. Deep learning 
-===========
+## Part 2. Deep learning 
 ### Preparation
 1. Preprare sample labels for each gene signature with **gene_clust/codes/tcga_label_csv_for_clam.ipynb**
 2. Dataset splitting: (gene signature *Inflammatory* used as an example for the following steps)
