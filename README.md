@@ -1,13 +1,14 @@
-Predict Immune and Inflammatory Gene Signature Expression Directly from Histology Images 
-***
+# Predict Immune and Inflammatory Gene Signature Expression Directly from Histology Images 
+
 
 **Predict 6 gene signatures associated with response to nivolumab in  advanced hepatocellular carcinoma (HCC) from the [sangro paper](https://pubmed.ncbi.nlm.nih.gov/32710922/).**
-- 6-Gene Interferon Gamma
-- Gajewski 13-Gene Inflammatory
-- Inflammatory
-- Interferon Gamma Biology
-- Ribas 10-Gene Interferon Gamma
-- T-cell Exhaustion
+- *6-Gene Interferon Gamma*
+- *Gajewski 13-Gene Inflammatory*
+- *Inflammatory*
+- *Interferon Gamma Biology*
+- *Ribas 10-Gene Interferon Gamma*
+- *T-cell Exhaustion*
+
 
 The deep learning models were trained and validated on the TCGA LIHC dataset. Our in-house dataset (from APHP Henri Mondor) was used for external validation.
 
@@ -148,14 +149,14 @@ Workflow
 
 Part 1. Gene expression clustering 
 ===========
-**To generate labels for Whole Slide Images (WSIs)**
-1. Process TCGA FPKM data using **gene_clust/codes/tcga_fpkm_processing.ipynb**
-2. Perform hierarchical clustering using **gene_clust/codes/PlotHeatmapGeneSignature.R** (to reproduce the heatmap), or with Python using **gene_clust/codes/tcga_fpkm_clustering.ipynb** (to get the same clustering results)
+***To generate labels for Whole Slide Images (WSIs)***
+1. Process TCGA FPKM data with **gene_clust/codes/tcga_fpkm_processing.ipynb**
+2. Perform hierarchical clustering with **gene_clust/codes/PlotHeatmapGeneSignature.R** (to reproduce the heatmap). Or using Python with **gene_clust/codes/tcga_fpkm_clustering.ipynb** (to get the same clustering results)
 
 Part 2. Deep learning 
 ===========
 ## Preparation
-1. Preprare sample labels for each gene signature using **gene_clust/codes/tcga_label_csv_for_clam.ipynb**
+1. Preprare sample labels for each gene signature with **gene_clust/codes/tcga_label_csv_for_clam.ipynb**
 
 
 ## Approach 1: CLAM
