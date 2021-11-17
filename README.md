@@ -10,7 +10,7 @@
 - *T-cell Exhaustion*
 
 Clustering was performed on the gene expression data to generate slide labels. Tumoral areas were annotated on slides and only patches from tumoral area were used.
-The deep learning models were trained and validated (60% training / 20% validation / 20% test) on the TCGA LIHC dataset, with 10-fold cross validation. Our in-house dataset (from APHP Henri Mondor) was used for external validation.
+The deep learning models were trained and validated (60% training / 20% validation / 20% test) on the [TCGA LIHC dataset](https://portal.gdc.cancer.gov/projects/TCGA-LIHC), with 10-fold Monte-carlo cross validation. Our in-house dataset (from APHP Henri Mondor) was used for external validation.
 
 
 **3 Deep learning approaches:**
@@ -166,7 +166,14 @@ python create_splits_seq.py --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 -
 ```
 
 ### WSI preparation
-1. Extract patches
+1. Rough annotations of tumoral regions are provided in **data/annotations**. Tissue segmentation and patch extraction: 
+### 20x with tumor masked (4_pt) (create_patches_fp.py save jpgs instead of pngs)
+$ python create_patches_fp.py --source data/data_tcga_hcc --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --process_list process_list_edited_20x.csv --patch --stitch --mask_save_dir results/masks_tumor --patch_save_dir results/patches_tumor_masked --stitch_save_dir results/stitches_tumor_masked --use_annotations --annotation_type txt --annotation_dir data/annotations
+### 40x with tumor masked (4_pt) (create_patches_fp.py save jpgs instead of pngs)
+$ python create_patches_fp.py --source data/data_tcga_hcc --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --custom_downsample 2 --process_list process_list_edited_40x.csv --patch --stitch --mask_save_dir results/masks_tumor --patch_save_dir results/patches_tumor_masked --stitch_save_dir results/stitches_tumor_masked --use_annotations --annotation_type txt --annotation_dir data/annotations
+Segmention and stitched results will be saved in **results**. A segmentation example(green --> tissue, blue --> holes, red --> tumor):
+<img src="docs/TCGA-2Y-A9H4-01Z-00-DX1.897C9E71-7FD7-4229-9A95-F61AE43D0FDA.jpg" width="500px" align="left" />
+
 
 ### Approach 1: Patch-based strategy
 #### Reference
