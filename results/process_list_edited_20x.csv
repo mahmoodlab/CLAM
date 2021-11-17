@@ -1,0 +1,11 @@
+slide_id,process,status,seg_level,sthresh,mthresh,close,use_otsu,a_t,a_h,max_n_holes,vis_level,line_thickness,white_thresh,black_thresh,use_padding,contour_fn
+TCGA-DD-A73A-01Z-00-DX1.6B409977-53A6-4DD9-9763-2094E5B83942.svs,1,processed,3,25,7,4,False,1,2,50,3,200,10,40,True,four_pt
+TCGA-DD-A73B-01Z-00-DX1.11B9A0BD-56CF-48C7-AC39-ABC5D22F0D94.svs,1,processed,3,25,7,4,False,1,2,50,3,200,10,40,True,four_pt
+TCGA-DD-A73C-01Z-00-DX1.B31DD97B-0C66-4404-9521-4CE5661CA0C4.svs,1,processed,3,15,7,4,False,1,2,50,3,200,5,40,True,four_pt
+TCGA-DD-A73D-01Z-00-DX1.455790BB-767B-458D-A90E-046FD47D0A92.svs,1,processed,2,15,7,4,False,1,2,50,2,200,5,40,True,four_pt
+TCGA-DD-A73E-01Z-00-DX1.E80B5E5D-BE89-4BD1-A4E3-EEA26027D6E0.svs,1,processed,2,15,7,4,False,20,2,50,2,200,5,40,True,four_pt
+TCGA-DD-A73F-01Z-00-DX1.94618B17-5501-4011-A634-A0669DDCCD2E.svs,1,processed,2,15,7,4,False,1,2,50,2,200,5,40,True,four_pt
+TCGA-DD-A73G-01Z-00-DX1.F5AB3B95-268C-44DA-9D42-7A7B5E1D8516.svs,1,processed,3,15,7,4,False,1,2,50,3,200,5,40,True,four_pt
+TCGA-HP-A5MZ-01Z-00-DX1.296DB311-8B9E-4A98-B53A-39BC2EB4A548.svs,1,processed,2,15,7,4,False,1,2,50,2,200,5,40,True,four_pt
+TCGA-HP-A5N0-01Z-00-DX1.DD11B335-405C-4724-8F16-236CFCA37854.svs,1,processed,2,15,7,4,False,1,2,50,2,200,5,40,True,four_pt
+TCGA-MR-A520-01Z-00-DX1.2F323BAC-56C9-4A0C-9C1B-2B4F776056B4.svs,1,processed,2,15,7,4,False,20,2,50,2,200,5,40,True,four_pt
