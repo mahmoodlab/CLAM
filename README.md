@@ -178,7 +178,7 @@ python create_patches_fp.py --source data/data_tcga_hcc --save_dir results --pat
 python create_patches_fp.py --source data/data_tcga_hcc --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --process_list process_list_edited_20x.csv --patch --stitch --mask_save_dir results/masks_tumor --patch_save_dir results/patches_tumor_masked --stitch_save_dir results/stitches_tumor_masked --use_annotations --annotation_type txt --annotation_dir data/annotations
 # 40x with saving only patch coordinates
 python create_patches_fp.py --source data/data_tcga_hcc --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --custom_downsample 2 --process_list process_list_edited_40x.csv --patch --stitch --mask_save_dir results/masks_tumor --patch_save_dir results/patches_tumor_masked --stitch_save_dir results/stitches_tumor_masked --use_annotations --annotation_type txt --annotation_dir data/annotations
-```shell
+```
 Segmention and stitched results will be saved in **results**. A segmentation example presented (green: tissue, blue: holes, red: tumor).
 
 
