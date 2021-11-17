@@ -168,7 +168,6 @@ python create_splits_seq.py --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 -
 ### WSI preparation
 1. Rough annotations of tumoral regions are provided in **data/annotations**. Tissue segmentation and patch extraction: 
 <img src="docs/TCGA-2Y-A9H4-01Z-00-DX1.897C9E71-7FD7-4229-9A95-F61AE43D0FDA.jpg" width="300px" align="left" />
-```shell
 20x with saving both patch coordinates and images
 ```shell
 python create_patches_fp.py --source data/data_tcga_hcc --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --process_list process_list_edited_20x.csv --patch --stitch --mask_save_dir results/masks_tumor --patch_save_dir results/patches_tumor_masked --stitch_save_dir results/stitches_tumor_masked --use_annotations --annotation_type txt --annotation_dir data/annotations
