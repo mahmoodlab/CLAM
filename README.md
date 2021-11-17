@@ -292,15 +292,15 @@ CUDA_VISIBLE_DEVICES=1 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 -
 
 ### Approach 3: CLAM
 
-***Clustering-constrained Attention Multiple Instance Learning**
+***Clustering-constrained Attention Multiple Instance Learning***
 
-A deep-learning-based weakly-supervised method that uses attention-based learning to automatically identify sub-regions of high diagnostic value in order to accurately classify the whole slide, while also utilizing instance-level clustering over the representative regions identified to constrain and refine the feature space.*
+*A deep-learning-based weakly-supervised method that uses attention-based learning to automatically identify sub-regions of high diagnostic value in order to accurately classify the whole slide, while also utilizing instance-level clustering over the representative regions identified to constrain and refine the feature space.*
 
 #### Reference
 *Lu, M.Y., Williamson, D.F.K., Chen, T.Y. et al. Data-efficient and weakly supervised computational pathology on whole-slide images. Nat Biomed Eng 5, 555–570 (2021). https://doi.org/10.1038/s41551-020-00682-w*
 
-#### Original repository
-[Github repository](https://github.com/mahmoodlab/CLAM) © [Mahmood Lab](http://www.mahmoodlab.org)
+[original Github repository](https://github.com/mahmoodlab/CLAM) © [Mahmood Lab](http://www.mahmoodlab.org)
+
 [Interactive Demo](http://clam.mahmoodlab.org) 
 
 
