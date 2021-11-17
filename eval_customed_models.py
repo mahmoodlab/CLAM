@@ -6,7 +6,7 @@ Used with conda env 'deepai'
 Evaluate shufflenet on patch level without annotations (non fast pipeline)
 Can comment out the part of slide-level aggregation, so as to parallel each fold
 Then use eval_customed_models_slide_aggregation.py
-@author: visiopharm5
+@author: Q Zeng
 """
 
 #%% 

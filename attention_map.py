@@ -2,7 +2,7 @@
 """
 Spyder Editor
 
-This is a temporary script file.
+@author: Q Zeng
 """
 
 import argparse

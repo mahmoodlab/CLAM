@@ -1,3 +1,15 @@
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed May 12 00:21:11 2021
+
+ShuffleNet patch-based 
+
+@author: Q Zeng
+"""
+
+
 #%% 
 from __future__ import print_function
 

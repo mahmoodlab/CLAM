@@ -4,7 +4,7 @@
 Created on Mon Jul 19 00:23:34 2021
 Load the patch evaluation results from eval_custmed_models.py or eval_custmed_models_fp.py
 And perform slide-level aggregation
-@author: visiopharm5
+@author: Q Zeng
 """
 
 #%% 

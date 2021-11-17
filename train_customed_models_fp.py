@@ -6,7 +6,7 @@ Created on Wed May 12 00:21:11 2021
 For fast pipeline
 Used with conda env 'deepai'
 
-@author: visiopharm5
+@author: Q Zeng
 """
 
 

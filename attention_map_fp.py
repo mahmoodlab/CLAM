@@ -11,7 +11,7 @@ Key workflow:
 
 Mondor slides are often too large for the 'dset' part, would block our workstation and finally be killed. 
 So we run this script for all the mondor tp slides on the VM UNIV.
-@author: visiopharm5
+@author: Q Zeng
 """
 #%%
 import argparse

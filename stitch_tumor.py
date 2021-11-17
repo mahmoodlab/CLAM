@@ -3,7 +3,7 @@
 """
 Created on Mon Sep 28 15:57:36 2020
 
-@author: visiopharm5
+@author: Q Zeng
 """
 
 from PIL import Image
