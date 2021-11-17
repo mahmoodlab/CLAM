@@ -1,6 +1,5 @@
 ## Predict Immune and Inflammatory Gene Signature Expression Directly from Histology Images 
 
-***
 **Predict 6 gene signatures associated with response to nivolumab in  advanced hepatocellular carcinoma (HCC) from the [sangro paper](https://pubmed.ncbi.nlm.nih.gov/32710922/).**
 - 6-Gene Interferon Gamma
 - Gajewski 13-Gene Inflammatory
