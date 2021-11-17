@@ -1,7 +1,7 @@
-### Predict Immune and Inflammatory Gene Signature Expression Directly from Histology Images 
+## Predict Immune and Inflammatory Gene Signature Expression Directly from Histology Images 
 
 ***
-***Predict 6 gene signatures associated with response to nivolumab in  advanced hepatocellular carcinoma (HCC) from the [sangro paper](https://pubmed.ncbi.nlm.nih.gov/32710922/).***
+**Predict 6 gene signatures associated with response to nivolumab in  advanced hepatocellular carcinoma (HCC) from the [sangro paper](https://pubmed.ncbi.nlm.nih.gov/32710922/).**
 - 6-Gene Interferon Gamma
 - Gajewski 13-Gene Inflammatory
 - Inflammatory
@@ -9,9 +9,9 @@
 - Ribas 10-Gene Interferon Gamma
 - T-cell Exhaustion
 
-**The deep learning models were trained and validated on the TCGA LIHC dataset. Our in-house dataset (private dataset from APHP Henri Mondor) was used for external validation.**
+The deep learning models were trained and validated on the TCGA LIHC dataset. Our in-house dataset (private dataset from APHP Henri Mondor) was used for external validation.
 
-**Clustering was performed on the gene expression data to generate slide labels. Tumoral areas were annotated on slides and only patches from tumoral area were used.**
+Clustering was performed on the gene expression data to generate slide labels. Tumoral areas were annotated on slides and only patches from tumoral area were used.
 ***
 
 Results
