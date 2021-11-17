@@ -1,7 +1,7 @@
 # Predict Immune and Inflammatory Gene Signature Expression Directly from Histology Images 
 
 
-**Predict 6 gene signatures associated with response to nivolumab in  advanced hepatocellular carcinoma (HCC) from the [sangro, Bruno, et al](https://pubmed.ncbi.nlm.nih.gov/32710922/).**
+**Predict 6 gene signatures associated with response to nivolumab in  advanced hepatocellular carcinoma (HCC) from the [Sangro, Bruno, et al](https://pubmed.ncbi.nlm.nih.gov/32710922/).**
 - *6-Gene Interferon Gamma*
 - *Gajewski 13-Gene Inflammatory*
 - *Inflammatory*
@@ -12,7 +12,7 @@
 Clustering was performed on the gene expression data to generate slide labels. Tumoral areas were annotated on slides and only patches from tumoral area were used.
 The deep learning models were trained and validated on the TCGA LIHC dataset. Our in-house dataset (from APHP Henri Mondor) was used for external validation.
 
-3 Deep learning approaches:
+**3 Deep learning approaches:**
 - *Patch-based* ([original repo](https://github.com/jnkather/DeepHistology))
 - *2 Multiple Instance Learning (MIL): CLAM and classic MIL* ([original repo](https://github.com/mahmoodlab/CLAM))
 
@@ -155,38 +155,52 @@ Workflow
 2. Perform hierarchical clustering with **gene_clust/codes/PlotHeatmapGeneSignature.R** (to reproduce the heatmap). Or using Python with **gene_clust/codes/tcga_fpkm_clustering.ipynb** (to get the same clustering results)
 
 ## Part 2. Deep learning 
-### Preparation
+### Label preparation
 1. Preprare sample labels for each gene signature with **gene_clust/codes/tcga_label_csv_for_clam.ipynb**
 2. Dataset splitting: (gene signature *Inflammatory* used as an example for the following steps)
 ```shell
 python create_splits_seq.py --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --seed 1 --label_frac 1 --k 10
 ```
 
+### WSI preparation
+1. Extract patches
+
+### Approach 1: Patch-based strategy
+#### Reference
+Kather, J. N., Heij, L. R., Grabsch, H. I., Loeffler, C., Echle, A., Muti, H. S., ... & Luedde, T. (2020). Pan-cancer image-based detection of clinically actionable genetic alterations. Nature cancer, 1(8), 789-799.
+
+#### Installation
+1. Install Anaconda with Python 3 via [https://www.anaconda.com/distribution/](https://www.anaconda.com/distribution/)
+2. Install *openslide*:
+```shell
+sudo apt-get install openslide-tools
+```
+3. Create a conda environment with **deepai.yml**: (to use ShuffleNet, we need a higher pytorch version than that of CLAM environment described below)
+```shell
+conda env create -n clam -f docs/deepai.yaml
+```
+4. Activate the conda environment:
+```shell
+conda activate deepai
+```
+5. Deactivate the conda environment when finishing the experiments:
+```shell
+conda deactivate deepai
+```
+
+#### Training
+```shell
+CUDA_VISIBLE_DEVICES=1 python train_customed_models_fp.py --early_stopping --patience 2 --min_epochs 5 --lr 5e-5 --reg 1e-5 --opt adam --batch_size 128 --seed 1 --k 10 --k_start -1 --k_end 10 --label_frac 1 --data_dir ./results/patches_tumor_masked --data_slide_dir ./data/data_tcga_hcc --target_patch_size 256 --trnsfrms imagenet --results_dir ./results/training_custom --exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_shufflenet_frz3_imagenet --train_weighting --bag_loss ce --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type shufflenet --freeze 3 --log_data > log_Inflammatory_shufflenet_frz3_imagenet.txt
+```
+#### Inference
+```shell
+CUDA_VISIBLE_DEVICES=0 python eval_customed_models.py --batch_size 512 --seed 1 --k 10 --k_start -1 --k_end 10 --data_dir ./results/patches_tumor_masked --trnsfrms imagenet --results_dir ./results/training_custom --eval_dir ./eval_results_349_custom --save_exp_code tcga_hcc_349_Inflammatory_cv_highvsrest_622_shufflenet_frz3_imagenet_s1_cv --models_exp_code tcga_hcc_349_Inflammatory_cv_highvsrest_622_shufflenet_frz3_imagenet_s1 --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type shufflenet --split test
+```
+#### Aggregation
+#### External validation
+
 
 ### Multiple instance learning (MIL) strategy
-
-**Clustering-constrained Attention Multiple Instance Learning**
-
-A deep-learning-based weakly-supervised method that uses attention-based learning to automatically identify sub-regions of high diagnostic value in order to accurately classify the whole slide, while also utilizing instance-level clustering over the representative regions identified to constrain and refine the feature space.
-
-#### Reference
-Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Images
-[ArXiv](https://arxiv.org/abs/2004.09666)
-```
-@inproceedings{lu2020clam,
-  title     = {Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Images},
-  author    = {Ming Y. Lu, Drew F. K. Williamson, Tiffany Y. Chen, Richard J. Chen, Matteo Barbieri, Faisal Mahmood},
-  booktitle = {Nature Biomedical Engineering - In Press},
-  year = {2020}
-}
-```
-
-#### Original repository
-[Github repository](https://github.com/mahmoodlab/CLAM) © [Mahmood Lab](http://www.mahmoodlab.org) - This code is made available under the GPLv3 License and is available for non-commercial academic purposes.
-
-[Interactive Demo](http://clam.mahmoodlab.org) 
-
-
 
 ## Installation
 
@@ -201,7 +215,20 @@ Encode the patches into 512-dimensional features using the default network ResNe
 ```shell
 CUDA_VISIBLE_DEVICES=0 python extract_features.py --data_dir ./results/patches_tumor/ --csv_path ./dataset_csv/tcga_hcc_feature_349.csv --feat_dir ./results/features_tumor --batch_size 256  --model resnet50
 ```
+### Approach 2: Classic MIL
 
+### Approach 3: CLAM
+
+***Clustering-constrained Attention Multiple Instance Learning**
+
+A deep-learning-based weakly-supervised method that uses attention-based learning to automatically identify sub-regions of high diagnostic value in order to accurately classify the whole slide, while also utilizing instance-level clustering over the representative regions identified to constrain and refine the feature space.*
+
+#### Reference
+Lu, M.Y., Williamson, D.F.K., Chen, T.Y. et al. Data-efficient and weakly supervised computational pathology on whole-slide images. Nat Biomed Eng 5, 555–570 (2021). https://doi.org/10.1038/s41551-020-00682-w
+
+#### Original repository
+[Github repository](https://github.com/mahmoodlab/CLAM) © [Mahmood Lab](http://www.mahmoodlab.org)
+[Interactive Demo](http://clam.mahmoodlab.org) 
 
 
 #### Training
@@ -214,12 +241,11 @@ By default results will be saved to results/exp_code corresponding to the exp_co
 tensorboard --logdir=.
 ```
 
-#### Testing
-##### TCGA test set
+#### Inference
 ```shell
 CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --data_dir ./results/features_tumor --results_dir ./results/training_gene_signatures --models_exp_code tcga_hcc_tumor_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --save_exp_code tcga_hcc_tumor_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1_cv --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type clam_sb --model_size small
 ```
-##### Mondor
+##### External validation
 We tested the 10 models (trained on TCGA) on the whole Mondor series.
 ```shell
 CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 --data_dir ./results/features_mondor_tumor --splits_dir ./splits/mondor_hcc_258_Inflammatory_cv_highvsrest_00X_100 --results_dir ./results/training_gene_signatures --models_exp_code tcga_hcc_tumor_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --save_exp_code mondor_hcc_tumor_258_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_258_Inflammatory_cv_highvsrest_00X --model_type clam_sb --model_size small
@@ -235,22 +261,9 @@ CUDA_VISIBLE_DEVICES=0 python attention_score.py --drop_out --k 10 --results_dir
 ```shell
 CUDA_VISIBLE_DEVICES=0 python attention_map.py --save_exp_code tcga_hcc_tumor_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1_cv --fold 5  --downscale 4  --snapshot --grayscale --colormap --blended --data_root_dir ./results/patches_tumor
 ```
-***
+### Other training settings
+#### Color unmixing with Macenko PCA method
 
-## Approach 2: Classic MIL
-
-
-## Approach 3: Patch-based method
-### Workflow proposed in Dr. Kather's [pan-cancer paper](https://www.nature.com/articles/s43018-020-0087-6)
-#### Training
-For this workflow, we have to create a new conda environment. Newer version packages are needed to use some pytorch pre-trained models.
-```shell
-CUDA_VISIBLE_DEVICES=0 python train_customed_models.py --early_stopping --patience 5 --max_epochs 30 --min_epochs 12 --lr 5e-5 --reg 1e-5 --opt adam --batch_size 128 --seed 1 --k 10 --k_start -1 --k_end 3 --label_frac 1 --data_dir ./results/patches_tumor --trnsfrms imagenet --results_dir ./results/training_custom --exp_code tcga_hcc_tumor_349_Inflammatory_cv_highvsrest_622_shufflenet_frz3_imagenet_blc3 --train_weighting --bag_loss ce --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type shufflenet --freeze 3
-```
-#### Testing
-```shell
-CUDA_VISIBLE_DEVICES=0 python eval_custom.py --batch_size 128 --k 10 --k_start -1 --k_end 10 --data_dir ./results/patches_tumor --results_dir ./results/training_custom --models_exp_code tcga_hcc_tumor_349_Inflammatory_cv_highvsrest_622_shufflenet_s1 --save_exp_code tcga_hcc_tumor_349_Inflammatory_cv_highvsrest_622_shufflenet_s1_cv --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type shufflenet
-```
 
 
 
