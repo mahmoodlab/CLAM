@@ -155,11 +155,15 @@ Part 1. Gene expression clustering
 
 Part 2. Deep learning 
 ===========
-## Preparation
+### Preparation
 1. Preprare sample labels for each gene signature with **gene_clust/codes/tcga_label_csv_for_clam.ipynb**
+2. Dataset splitting: (gene signature *Inflammatory* used as an example for the following steps)
+```shell
+python create_splits_seq.py --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --seed 1 --label_frac 1 --k 10
+```
 
 
-## Approach 1: CLAM
+### Approach 1: CLAM
 
 **Clustering-constrained Attention Multiple Instance Learning**
 
@@ -198,10 +202,7 @@ Encode the patches into 512-dimensional features using the default network ResNe
 CUDA_VISIBLE_DEVICES=0 python extract_features.py --data_dir ./results/patches_tumor/ --csv_path ./dataset_csv/tcga_hcc_feature_349.csv --feat_dir ./results/features_tumor --batch_size 256  --model resnet50
 ```
 
-#### Dataset splitting
-```shell
-python create_splits_seq.py --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --seed 1 --label_frac 1 --k 10
-```
+
 
 #### Training
 For evaluating the CLAM's performance, 10-fold of train/val/test splits were used. We used 10-fold 60/20/20 splits for tcga-lihc, with 100% of training data can be found under the splits folder. These splits can be automatically generated using the create_splits_seq.py script with minimal modification just like with main.py. For example, gene signature of Inflammatory:
