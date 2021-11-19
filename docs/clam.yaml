@@ -4,6 +4,10 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - pytorch
+  - torchvision
+  - torchaudio 
+  - cudatoolkit=11.3
   - _libgcc_mutex=0.1=main
   - _tflow_select=2.3.0=mkl
   - absl-py=0.9.0=py37_0
@@ -16,7 +20,6 @@ dependencies:
   - cairo=1.16.0=h18b612c_1001
   - certifi=2019.11.28=py37_1
   - cffi=1.14.0=py37h2e261b9_0
-  - cudatoolkit
   - cycler=0.10.0=py37_0
   - cython=0.29.15=py37he6710b0_0
   - dbus=1.13.12=h746ee38_0
@@ -112,7 +115,6 @@ dependencies:
   - python=3.7.7=hcf32534_0_cpython
   - python-dateutil=2.8.1=py_0
   - python-spams=2.6.1=py37h55324e4_1204
-  - pytorch=1.3.1=py3.7_cuda10.1.243_cudnn7.6.3_0
   - pytz=2019.3=py_0
   - pyzmq=18.1.1=py37he6710b0_0
   - qt=5.9.7=h5867ecd_1
@@ -225,8 +227,6 @@ dependencies:
     - tensorboardx==1.9
     - tifffile==2020.2.16
     - toml==0.10.0
-    - torchsummary==1.5.1
-    - torchvision==0.1.8
     - tox==3.13.2
     - tqdm==4.37.0
     - twisted==19.7.0
