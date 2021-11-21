@@ -123,7 +123,6 @@ if __name__ == "__main__":
         opt_thresholds = []
     else:
         opt_thresholds = pd.read_csv(os.path.join(args.eval_dir, args.thresholds_dir, 'cutoffs.csv'), header=None, index_col=0)
-        
 
     for fold in range(args.k):
         file = os.path.join(path, "split_{}_results.pkl".format(fold))

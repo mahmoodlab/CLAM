@@ -10,7 +10,8 @@
 - *T-cell Exhaustion*
 
 Clustering was performed on the gene expression data to generate slide labels. Tumoral areas were annotated on slides and only patches from tumoral area were used.
-The deep learning models were trained and validated (60% training / 20% validation / 20% test) on the [TCGA LIHC dataset](https://portal.gdc.cancer.gov/projects/TCGA-LIHC), with 10-fold Monte-carlo cross validation. Our in-house dataset (from APHP Henri Mondor) was used for external validation.
+The deep learning models were trained and validated (60% training / 20% validation / 20% test) on the [TCGA LIHC dataset](https://portal.gdc.cancer.gov/projects/TCGA-LIHC), with 10-fold Monte-carlo cross validation. Our in-house dataset (from APHP Henri Mondor) was used for external validation. 
+Of note, the discovery series was stained with H&E while external validation series was stained with HES. Thus we also implemented an option of stain unmixing (3 methods: Macenko PCA or XU SNMF or fixed HES vector) and saffron removal for external validation series. Color noralization (2 methods: Reinhard or Macenco PCA) and on-the-fly basic geometric augmentation were also implemented.
 
 
 **3 Deep learning approaches:**
@@ -246,7 +247,7 @@ CUDA_VISIBLE_DEVICES=0 python eval_customed_models_slide_aggregation.py --eval_d
 
 The optimal cut-off will be save in as **PATH_TO_EVAL_RESULTS/cutoffs.csv**, to be used for external validation. For external validation:
 ```shell
-CUDA_VISIBLE_DEVICES=0 python eval_customed_models_slide_aggregation.py --eval_dir ./eval_results_349_custom_tumor_masked --save_exp_code EVAL_mondor_hcc_tumor-masked_139_Inflammatory_cv_highvsrest_00X_shufflenet_frz3_imagenet_s1_cv --k 10 --thresholds_dir EVAL_mondor_hcc_tumor-masked_139_Inflammatory_cv_highvsrest_00X_shufflenet_frz3_imagenet_s1_cv"
+CUDA_VISIBLE_DEVICES=0 python eval_customed_models_slide_aggregation.py --eval_dir ./eval_results_349_custom_tumor_masked --save_exp_code EVAL_mondor_hcc_tumor-masked_139_Inflammatory_cv_highvsrest_00X_shufflenet_frz3_imagenet_s1_cv --k 10 --thresholds_dir EVAL_tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_shufflenet_frz3_imagenet_s1_cv
 ```
 
 ***
@@ -281,13 +282,13 @@ tensorboard --logdir=.
 
 #### Inference
 ```shell
-CUDA_VISIBLE_DEVICES=1 python eval.py --drop_out --k 10 --data_dir ./results/features_tumor_masked --results_dir ./results/training_gene_signatures_tumor_masked --models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_MIL_50_s1 --eval_dir ./eval_results_349_tumor_masked --save_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_MIL_50_s1_cv --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type mil
+CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --data_dir ./results/features_tumor_masked --results_dir ./results/training_gene_signatures_tumor_masked --models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_MIL_50_s1 --eval_dir ./eval_results_349_tumor_masked --save_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_MIL_50_s1_cv --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type mil
 ```
 ##### External validation
 We tested the 10 models (trained on TCGA) on the whole Mondor series.
 ```shell
-CUDA_VISIBLE_DEVICES=1 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 --data_dir ./results/features_mondor_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --results_dir ./results/training_gene_signatures_tumor_masked --models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_MIL_50_s1 --eval_dir ./eval_results_349_tumor_masked --save_exp_code mondor_hcc_tumor-masked_139_Inflammatory_cv_highvsrest_00X_MIL_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type mil
-CUDA_VISIBLE_DEVICES=1 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 --data_dir results/features_mondor_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --results_dir ./results/training_gene_signatures_tumor_masked --models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked --save_exp_code mondor_hcc_tumor-masked_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb --model_size small
+CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 --data_dir ./results/features_mondor_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --results_dir ./results/training_gene_signatures_tumor_masked --models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_MIL_50_s1 --eval_dir ./eval_results_349_tumor_masked --save_exp_code mondor_hcc_tumor-masked_139_Inflammatory_cv_highvsrest_00X_MIL_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type mil
+CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 --data_dir results/features_mondor_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --results_dir ./results/training_gene_signatures_tumor_masked --models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked --save_exp_code mondor_hcc_tumor-masked_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb --model_size small
 ```
 
 ### Approach 3: CLAM
@@ -322,7 +323,7 @@ CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --data_dir results/featu
 ##### External validation
 We tested the 10 models (trained on TCGA) on the whole Mondor series.
 ```shell
-CUDA_VISIBLE_DEVICES=1 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 --data_dir results/features_mondor_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --results_dir ./results/training_gene_signatures_tumor_masked --models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked --save_exp_code mondor_hcc_tumor-masked_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb --model_size small
+CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 --data_dir results/features_mondor_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --results_dir ./results/training_gene_signatures_tumor_masked --models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked --save_exp_code mondor_hcc_tumor-masked_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb --model_size small
 ```
 #### Extract attention scores
 Calculate the attention scores and visualize the attention map for interpretability. The user could pass --fold for a specific fold, or --k_start and --k_end to specify a fold range, otherwise the default will process all the k folds.
@@ -335,8 +336,71 @@ CUDA_VISIBLE_DEVICES=0 python attention_score.py --drop_out --k 10 --results_dir
 ```shell
 CUDA_VISIBLE_DEVICES=0 python attention_map.py --save_exp_code tcga_hcc_tumor_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1_cv --fold 5  --downscale 4  --snapshot --grayscale --colormap --blended --data_root_dir ./results/patches_tumor
 ```
+
+***
 ### Other training settings
-#### Color unmixing with Macenko PCA method
+#### Color unmixing with Macenko PCA method and remove saffron
+```shell
+$ CUDA_VISIBLE_DEVICES=0 python extract_features_fp.py --data_dir results/patches_mondor_tumor_masked --data_slide_dir PATH_TO_MONDOR_WSI --csv_path ./dataset_csv/mondor_hcc_feature_139_all.csv --feat_dir results/features-unmix-macenko-pca_mondor_tumor_masked --target_patch_size 256 --batch_size 128 --unmixing --separate_stains_method macenko_pca --file_bgr data/bgr_intensity_mondor.csv --delete_third_stain --convert_to_rgb
+
+$ CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 --data_dir results/features-unmix-macenko-pca_mondor_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --results_dir ./results/training_gene_signatures_tumor_masked --models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked_unmix --save_exp_code mondor_hcc_tumor-masked_unmix-macenko-pca_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb --model_size small
+```
+
+#### Color unmixing with XU SNMF method and remove saffron
+```shell
+$ CUDA_VISIBLE_DEVICES=0 python extract_features_fp.py --data_dir results/patches_mondor_tumor_masked --data_slide_dir PATH_TO_MONDOR_WSI --csv_path ./dataset_csv/mondor_hcc_feature_139_all.csv --feat_dir results/features-unmix-xu-snmf_mondor_tumor_masked --target_patch_size 256 --batch_size 128 --unmixing --separate_stains_method xu_snmf --file_bgr data/bgr_intensity_mondor.csv --delete_third_stain --convert_to_rgb
+
+$ CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 --data_dir results/features-unmix-xu-snmf_mondor_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --results_dir ./results/training_gene_signatures_tumor_masked --models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked_unmix --save_exp_code mondor_hcc_tumor-masked_unmix-xu-snmf_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb --model_size small
+```
+
+#### Color unmixing with fixed_hes_vector and remove saffron
+```shell
+$ CUDA_VISIBLE_DEVICES=0 python extract_features_fp.py --data_dir results/patches_mondor_tumor_masked --data_slide_dir PATH_TO_MONDOR_WSI --csv_path ./dataset_csv/mondor_hcc_feature_139_all.csv --feat_dir results/features-unmix-fixed-hes-vector_mondor_tumor_masked --target_patch_size 256 --batch_size 128 --unmixing --separate_stains_method fixed_hes_vector --file_bgr data/bgr_intensity_mondor.csv --delete_third_stain --convert_to_rgb
+
+$ CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 --data_dir results/features-unmix-fixed-hes-vector_mondor_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --results_dir ./results/training_gene_signatures_tumor_masked --models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked_unmix --save_exp_code mondor_hcc_tumor-masked_unmix-fixed-hes-vector_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb --model_size small
+```
+
+### Color normalization
+#### reinhard
+```shell
+$ CUDA_VISIBLE_DEVICES=0 python extract_features_fp.py --data_dir results/patches_tumor_masked --data_slide_dir PATH_TO_TCGA_WSI --csv_path ./dataset_csv/tcga_hcc_feature_354.csv --feat_dir results/features-norm-reinhard_tumor_masked --batch_size 256 --target_patch_size 256 --color_norm --color_norm_method reinhard
+
+$ CUDA_VISIBLE_DEVICES=0 python extract_features_fp.py --data_dir results/patches_mondor_tumor_masked --data_slide_dir PATH_TO_MONDOR_WSI --csv_path ./dataset_csv/mondor_hcc_feature_139_all.csv --feat_dir results/features-norm-reinhard_mondor_tumor_masked --target_patch_size 256 --batch_size 128 --color_norm --color_norm_method reinhard
+
+$ CUDA_VISIBLE_DEVICES=0 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 1 --data_dir results/features-norm-reinhard_tumor_masked --results_dir ./results/training_gene_signatures_tumor_masked_norm --exp_code tcga_hcc_tumor-masked_norm-reinhard_349_Inflammatory_cv_highvsrest_622_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type clam_sb --model_size small --log_data --B 8 > log_Inflammatory_tumor_masked_norm.txt
+
+$ CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --data_dir results/features-norm-reinhard_tumor_masked --results_dir ./results/training_gene_signatures_tumor_masked_norm --models_exp_code tcga_hcc_tumor-masked_norm-reinhard_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked_norm --save_exp_code tcga_hcc_tumor-masked_norm-reinhard_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1_cv --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type clam_sb --model_size small
+
+$ CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 --data_dir results/features-norm-reinhard_mondor_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --results_dir ./results/training_gene_signatures_tumor_masked_norm --models_exp_code tcga_hcc_tumor-masked_norm-reinhard_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked_norm --save_exp_code mondor_hcc_tumor-masked_norm-reinhard_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb --model_size small
+```
+
+#### Macenko PCA
+```shell
+$ CUDA_VISIBLE_DEVICES=0 python extract_features_fp.py --data_dir results/patches_tumor_masked --data_slide_dir PATH_TO_TCGA_WSI --csv_path ./dataset_csv/tcga_hcc_feature_354.csv --feat_dir results/features-norm-macenko-pca_tumor_masked --batch_size 256 --target_patch_size 256 --color_norm --color_norm_method macenko_pca --file_bgr data/bgr_intensity_tcga.csv --save_images_to_h5 --image_h5_dir results/patches-norm-macenko-pca_tumor_masked
+
+$ CUDA_VISIBLE_DEVICES=0 python extract_features_fp.py --data_dir results/patches_mondor_tumor_masked --data_slide_dir PATH_TO_MONDOR_WSI --csv_path ./dataset_csv/mondor_hcc_feature_139_all.csv --feat_dir results/features-norm-macenko-pca_mondor_tumor_masked --target_patch_size 256 --batch_size 128 --color_norm --color_norm_method macenko_pca --file_bgr data/bgr_intensity_mondor.csv --save_images_to_h5 --image_h5_dir results/patches-norm-macenko-pca_mondor_tumor_masked
+
+$ CUDA_VISIBLE_DEVICES=0 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 1 --data_dir results/features-norm-macenko-pca_tumor_masked --results_dir ./results/training_gene_signatures_tumor_masked_norm --exp_code tcga_hcc_tumor-masked_norm-macenko-pca_349_Inflammatory_cv_highvsrest_622_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type clam_sb --model_size small --log_data --B 8 > log_Inflammatory_tumor_masked_norm.txt
+
+$ CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --data_dir results/features-norm-macenko-pca_tumor_masked --results_dir ./results/training_gene_signatures_tumor_masked_norm --models_exp_code tcga_hcc_tumor-masked_norm-macenko-pca_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked_norm --save_exp_code tcga_hcc_tumor-masked_norm-macenko-pca_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1_cv --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type clam_sb --model_size small
+
+$ CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 --data_dir results/features-norm-macenko-pca_mondor_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --results_dir ./results/training_gene_signatures_tumor_masked_norm --models_exp_code tcga_hcc_tumor-masked_norm-macenko-pca_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked_norm --save_exp_code mondor_hcc_tumor-masked_norm-macenko-pca_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb --model_size small
+```
+
+### Data augmentation
+```shell
+$ CUDA_VISIBLE_DEVICES=0 python data_augm.py --data_dir results/patches_tumor_masked --data_slide_dir PATH_TO_TCGA_WSI --result_dir results/patches-augm-8-flips-rots_tumor_masked --csv_path dataset_csv/tcga_hcc_feature_354.csv --target_patch_size 256
+
+$ CUDA_VISIBLE_DEVICES=0 python extract_features.py --data_dir results/patches-augm-8-flips-rots_tumor_masked --csv_path ./dataset_csv/tcga_hcc_feature_354.csv --feat_dir results/features-augm-8-flips-rots_tumor_masked --batch_size 256 --model resnet50 --trnsfrms imagenet --train_augm
+
+$ CUDA_VISIBLE_DEVICES=0 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 1 --data_dir results/features-augm-8-flips-rots_tumor_masked --results_dir ./results/training_gene_signatures_tumor_masked_augm --exp_code tcga_hcc_tumor-masked_augm-8-flips-rots_349_Inflammatory_cv_highvsrest_622_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type clam_sb --model_size small --log_data --B 8 --train_augm > log_Inflammatory_tumor_masked_augm.txt
+
+
+$ CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --data_dir results/features_tumor_masked --results_dir ./results/training_gene_signatures_tumor_masked_augm --models_exp_code tcga_hcc_tumor-masked_augm-8-flips-rots_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked_augm --save_exp_code tcga_hcc_tumor-masked_augm-8-flips-rots_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1_cv --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type clam_sb --model_size small
+
+$ CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 --data_dir results/features_mondor_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --results_dir ./results/training_gene_signatures_tumor_masked_augm --models_exp_code tcga_hcc_tumor-masked_augm-8-flips-rots_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked_augm --save_exp_code mondor_hcc_tumor-masked_augm-8-flips-rots_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb --model_size small
+```
+
 
 
 

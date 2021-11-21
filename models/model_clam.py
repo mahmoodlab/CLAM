@@ -180,7 +180,7 @@ class CLAM_SB(nn.Module):
 
             if self.subtyping:
                 total_inst_loss /= len(self.instance_classifiers)
-                
+            
         M = torch.mm(A, h) 
         logits = self.classifiers(M) # 1x2, slide-level prob of k classes
         Y_hat = torch.topk(logits, 1, dim = 1)[1] # values, indices = torch.topk(), so here take indices therefore the class.
