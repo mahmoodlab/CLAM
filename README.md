@@ -190,7 +190,9 @@ python create_patches_fp.py --source PATH_TO_TCGA_WSI --save_dir results --patch
 
 <img src="docs/TCGA-2Y-A9H4-01Z-00-DX1.897C9E71-7FD7-4229-9A95-F61AE43D0FDA.jpg" width="350px" align="right" />
 
-Segmention and stitched results will be saved in **results**. Please find in [results/patches_tumor_masked](https://github.com/qinghezeng/CLAM/tree/master/results/patches_tumor_masked) some patch examples (to play with the follwoing steps). A segmentation example presented on the right (green --> tissue, blue --> holes, red --> tumor).
+Segmention and stitched results will be saved in **results**. Please find in [results/patches_tumor_masked](https://github.com/qinghezeng/CLAM/tree/master/results/patches_tumor_masked) some patch examples (to play with the follwoing steps). 
+
+A segmentation example presented on the right (green --> tissue, blue --> holes, red --> tumor).
 
 ***
 ### Approach 1: Patch-based strategy
