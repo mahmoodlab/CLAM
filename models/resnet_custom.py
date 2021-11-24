@@ -113,7 +113,7 @@ def resnet50_baseline(pretrained=False):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    # use adaptive mean-spatial pooling after the 3rd residual block of the network, so 3 residual blocks with 3,4,6 Bottleneck_Baseline, respectively
+    # use adaptive mean-spatial pooling after the 3rd residual block of the network, so 3 stages (/blocks) with 3,4,6 Bottleneck_Baseline, respectively
     model = ResNet_Baseline(Bottleneck_Baseline, [3, 4, 6, 3]) 
     if pretrained:
         model = load_pretrained_weights(model, 'resnet50')
