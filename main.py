@@ -176,6 +176,20 @@ elif args.task == 'task_2_tumor_subtyping':
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
         
+elif args.task == 'idibell':
+    args.n_classes=3
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tumor_subtyping_dummy_clean.csv',
+                            data_dir= os.path.join(args.data_root_dir, 'tumor_subtyping_resnet_features'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
+                            patient_strat= False,
+                            ignore=[])
+
+    if args.model_type in ['clam_sb', 'clam_mb']:
+        assert args.subtyping 
+        
 else:
     raise NotImplementedError
     
