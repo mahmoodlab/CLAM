@@ -12,7 +12,7 @@ parser.add_argument('--seed', type=int, default=1,
                     help='random seed (default: 1)')
 parser.add_argument('--k', type=int, default=10,
                     help='number of splits (default: 10)')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal', 'task_2_tumor_subtyping'])
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal', 'task_2_tumor_subtyping', 'idibell'])
 parser.add_argument('--val_frac', type=float, default= 0.1,
                     help='fraction of labels for validation (default: 0.1)')
 parser.add_argument('--test_frac', type=float, default= 0.1,
@@ -37,6 +37,24 @@ elif args.task == 'task_2_tumor_subtyping':
                             seed = args.seed, 
                             print_info = True,
                             label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
+                            patient_strat= True,
+                            patient_voting='maj',
+                            ignore=[])
+
+elif args.task == 'idibell':
+    #args.n_classes=4
+    args.n_classes=3
+    working_dir = '/home/weismanal/notebook/2021-11-11/testing_clam'
+    #label_dict = {'pole': 0, 'msi': 1, 'lcn': 2, 'p53': 3}
+    label_dict = {'pole': 0, 'lcn': 1, 'p53': 2}
+    #label_col = 'label'
+    label_col = 'label_dummy'
+    dataset = Generic_WSI_Classification_Dataset(csv_path = os.path.join(working_dir, 'data_labels.csv'),
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = label_dict,
+                            label_col = label_col,
                             patient_strat= True,
                             patient_voting='maj',
                             ignore=[])
