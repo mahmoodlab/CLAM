@@ -97,7 +97,7 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', 'idibell'])
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping'])
 ### CLAM specific options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
                      help='disable instance-level clustering')
@@ -175,28 +175,6 @@ elif args.task == 'task_2_tumor_subtyping':
 
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
-        
-elif args.task == 'idibell':
-    #args.n_classes=4
-    args.n_classes=3
-    working_dir = '/home/weismanal/notebook/2021-11-11/testing_clam'
-    dataset_name = 'pinyi'
-    #label_dict = {'pole': 0, 'msi': 1, 'lcn': 2, 'p53': 3}
-    label_dict = {'pole': 0, 'lcn': 1, 'p53': 2}
-    #label_col = 'label'
-    label_col = 'label_dummy'
-    dataset = Generic_MIL_Dataset(csv_path = os.path.join(working_dir, 'data_labels.csv'),
-                            data_dir= os.path.join(working_dir, 'results', dataset_name, 'features'),
-                            shuffle = False, 
-                            seed = args.seed, 
-                            print_info = True,
-                            label_dict = label_dict,
-                            label_col = label_col,
-                            patient_strat= False,
-                            ignore=[])
-
-    if args.model_type in ['clam_sb', 'clam_mb']:
-        assert args.subtyping
         
 else:
     raise NotImplementedError
