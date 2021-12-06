@@ -100,7 +100,7 @@ CUDA_VISIBLE_DEVICES=0 python eval_customed_models_slide_aggregation.py --eval_d
 
 OS: Linux (Tested on Ubuntu 18.04)
 
-Please refer our [installation tutorial] (tutorials/install_clam.md) for detailed instructions about the conda environment creation.
+Please refer our [installation tutorial] (install_clam.md) for detailed instructions about the conda environment creation.
 
 #### Feature exaction
 Encode the patches into 512-dimensional features using the ResNet50 pretrained on ImageNet

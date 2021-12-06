@@ -217,16 +217,16 @@ Workflow
 1. Process TCGA FPKM data with **gene_clust/codes/tcga_fpkm_processing.ipynb**
 2. Perform hierarchical clustering with **gene_clust/codes/PlotHeatmapGeneSignature.R** (to reproduce the heatmap). Or using Python with **gene_clust/codes/tcga_fpkm_clustering.ipynb** (to get the same clustering results)
 
-*All TCGA data used and clutering results are provided in **gene_clust/data** and **gene_clust/results**. Due to privacy issues, the data in Mondor series is not provided but commands for external validation are described in this [tutorial](https://github.com/qinghezeng/CLAM/blob/master/external_validation.md).*
+*All TCGA data used and clutering results are provided in **gene_clust/data** and **gene_clust/results**. Due to privacy issues, the data in Mondor series is not provided but commands for external validation are described in this [tutorial](tutorials/external_validation.md).*
 
 ## Part 2. Deep learning
 ***To classify WSIs***
 
-- [Tutorial](https://github.com/qinghezeng/CLAM/blob/master/with_annotations.md) using all tissue regions without annotations.
+- [Tutorial](tutorials/with_annotations.md) using all tissue regions without annotations.
 
-- [Tutorial](https://github.com/qinghezeng/CLAM/blob/master/without_annotations.md) using annotations. Annotations should be coordinates at the highest mangification of the WSI. Simple annotations in *TXT* and hierarchical annotations (for example to exclude necrosis inside a tumor) in *NPT* can be accepted.
+- [Tutorial](tutorials/without_annotations.md) using annotations. Annotations should be coordinates at the highest mangification of the WSI. Simple annotations in *TXT* and hierarchical annotations (for example to exclude necrosis inside a tumor) in *NPT* can be accepted.
 
-- [Tutorial](https://github.com/qinghezeng/CLAM/blob/master/other_settings.md) for other settings, including stain unmixing (and saffron removal), color normalization or data augmentation.
+- [Tutorial](tutorials/other_settings.md) for other settings, including stain unmixing (and saffron removal), color normalization or data augmentation.
 
 
 
