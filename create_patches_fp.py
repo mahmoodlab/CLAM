@@ -102,10 +102,10 @@ def initialize_df(slides, seg_params, filter_params, vis_params, patch_params,
         'contour_fn': np.full((total), patch_params['contour_fn'])
         })
 
-    if save_patches:
-        default_df_dict.update({
-            'white_thresh': np.full((total), int(patch_params['white_thresh']), dtype=np.uint8),
-            'black_thresh': np.full((total), int(patch_params['black_thresh']), dtype=np.uint8)})
+    #if save_patches:
+    #    default_df_dict.update({
+    #        'white_thresh': np.full((total), int(patch_params['white_thresh']), dtype=np.uint8),
+    #        'black_thresh': np.full((total), int(patch_params['black_thresh']), dtype=np.uint8)})
 
     if use_heatmap_args:
         # initiate empty x,y coordinates in case not provided

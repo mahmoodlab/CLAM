@@ -3,7 +3,7 @@
 
 **Predict 6 gene signatures associated with response to nivolumab and survival in advanced hepatocellular carcinoma (HCC) from [Sangro, Bruno, et al](https://pubmed.ncbi.nlm.nih.gov/32710922/).**
 - ***6-Gene Interferon Gamma** ([Ayers, Mark, et al.](https://pubmed.ncbi.nlm.nih.gov/28650338/))* 
-- ***Gajewski 13-Gene Inflammatory** ([Spranger, Stefani, Riyue Bao, and Thomas F. Gajewski.](https://pubmed.ncbi.nlm.nih.gov/25970248/))*
+- ***Gajewski 13-Gene Inflammatory** ([Spranger, Stefani, Riyue Bao, and Thomas F. Gajewski](https://pubmed.ncbi.nlm.nih.gov/25970248/))*
 - ***Inflammatory** ([Sangro, Bruno, et al](https://pubmed.ncbi.nlm.nih.gov/32710922/))* 
 - ***Interferon Gamma Biology** ([Ayers, Mark, et al.](https://pubmed.ncbi.nlm.nih.gov/28650338/))* 
 - ***Ribas 10-Gene Interferon Gamma** ([Ayers, Mark, et al.](https://pubmed.ncbi.nlm.nih.gov/28650338/))* 
@@ -222,11 +222,34 @@ Workflow
 ## Part 2. Deep learning
 ***To classify WSIs***
 
-- [Tutorial](tutorials/with_annotations.md) using all tissue regions without annotations.
+The patch based approach requires another conda environment compared the two MIL approaches. According to the original CLAM repository, there are two options for tessellation, either saving both coordinates and images, or only coordinates to economize storage space (especially for large dataset or multiple modified patch versions) and loading images on-the-fly during the feature extraction (so-called *fp*). Annotations should be coordinates at the highest mangification of the WSI. Simple annotations in *TXT* and hierarchical annotations (for example to exclude necrosis inside a tumor) in *NPT* can be accepted.
 
-- [Tutorial](tutorials/without_annotations.md) using annotations. Annotations should be coordinates at the highest mangification of the WSI. Simple annotations in *TXT* and hierarchical annotations (for example to exclude necrosis inside a tumor) in *NPT* can be accepted.
 
-- [Tutorial](tutorials/other_settings.md) for other settings, including stain unmixing (and saffron removal), color normalization or data augmentation.
+1. **Patch based approach**
+    - fp
+        - Without annotations: [tutorial_patch-based_fp](tutorials/patch-based_fp.md)
+        - With annotations: [tutorial_patch-based_fp_anno](tutorials/patch-based_fp_anno.md)
+    - not fp
+        - Without annotations: [tutorial_patch-based](tutorials/patch-based.md)
+        - With annotations: [tutorial_patch-based_anno](tutorials/patch-based_anno.md)
+2. **Classic MIL**
+    - fp
+        - Without annotations: [tutorial_mil_fp](tutorials/mil_fp.md)
+        - With annotations: [tutorial_mil_fp_anno](tutorials/mil_fp_anno.md)
+    - not fp
+        - Without annotations: [tutorial_mil](tutorials/mil.md)
+        - With annotations: [tutorial_mil_anno](tutorials/mil_anno.md)
+3. **CLAM**
+    - fp
+        - Without annotations: [tutorial_clam_fp](tutorials/clam_fp.md)
+        - With annotations: [tutorial_clam_fp_anno](tutorials/clam_fp_anno.md)
+    - not fp
+        - Without annotations: [tutorial_clam](tutorials/clam.md)
+        - With annotations: [tutorial_clam_anno](tutorials/clam_anno.md)
+4. **Other settings**: [tutorial](tutorials/other_settings.md), including stain unmixing (and saffron removal), color normalization or data augmentation.
+
+
+
 
 
 
