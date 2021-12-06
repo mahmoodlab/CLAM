@@ -98,6 +98,8 @@ def initialize_df(slides, seg_params, filter_params, vis_params, patch_params,
         'line_thickness': np.full((total), int(vis_params['line_thickness']), dtype=np.uint32),
 
         # patching params
+        'white_thresh': np.full((total), int(patch_params['white_thresh']), dtype=np.uint8),
+		'black_thresh': np.full((total), int(patch_params['black_thresh']), dtype=np.uint8),
         'use_padding': np.full((total), bool(patch_params['use_padding']), dtype=bool),
         'contour_fn': np.full((total), patch_params['contour_fn'])
         })
