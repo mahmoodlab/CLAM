@@ -222,11 +222,11 @@ Workflow
 ## Part 2. Deep learning
 ***To classify WSIs***
 
-Without annotations: [tutorial](https://github.com/qinghezeng/CLAM/blob/master/with_annotations.md)
+- [Tutorial](https://github.com/qinghezeng/CLAM/blob/master/with_annotations.md) using all tissue regions without annotations.
 
-With annotations: [tutorial](https://github.com/qinghezeng/CLAM/blob/master/without_annotations.md)
+- [Tutorial](https://github.com/qinghezeng/CLAM/blob/master/without_annotations.md) using annotations. Annotations should be coordinates at the highest mangification of the WSI. Simple annotations in *TXT* and hierarchical annotations (for example to exclude necrosis inside a tumor) in *NPT* can be accepted.
 
-Other settings: [tutorial](https://github.com/qinghezeng/CLAM/blob/master/other_settings.md) (color unmixing and saffron removal, color normalization, data augmentation)
+- [Tutorial](https://github.com/qinghezeng/CLAM/blob/master/other_settings.md) for other settings, including stain unmixing (and saffron removal), color normalization or data augmentation.
 
 
 
