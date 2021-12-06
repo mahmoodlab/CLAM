@@ -356,7 +356,7 @@ class Whole_Slide_Bag_FP(Dataset):
                         img[:,:,:] = int(self.bgr.mean())
                         
                 elif self.separate_stains_method == 'xu_snmf': # with a initialization of a first xu_snmf stain separation (reordered) to keep the channel in right order
-                    w_init = np.load('/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/color_normalization/44286/wc_snmf_06.npy')
+                    w_init = np.load('../color_normalization/44286/wc_snmf_06.npy')
                     img_sda = histomicstk.preprocessing.color_conversion.rgb_to_sda(np.asarray(img), self.bgr)
                     wc_snmf = histomicstk.preprocessing.color_deconvolution.separate_stains_xu_snmf(img_sda, w_init, 0.2)
                     stains_snmf_, stainsfloat_snmf_, _ = histomicstk.preprocessing.color_deconvolution.color_deconvolution(np.asarray(img), wc_snmf, np.asarray(self.bgr))
@@ -373,7 +373,7 @@ class Whole_Slide_Bag_FP(Dataset):
                         img = stains_snmf
                         
                 elif self.separate_stains_method == 'fixed_hes_vector': # use a fixed HES stain vector from an image with obvious saffron
-                    w_init = np.load('/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/color_normalization/44286/wc_snmf_06.npy')
+                    w_init = np.load('../color_normalization/44286/wc_snmf_06.npy')
                     stains_snmf_, stainsfloat_snmf_, _ = histomicstk.preprocessing.color_deconvolution.color_deconvolution(np.asarray(img), w_init, np.asarray(self.bgr))
                     
                     stains_snmf = stains_snmf_.copy()
@@ -399,12 +399,12 @@ class Whole_Slide_Bag_FP(Dataset):
         if self.color_norm:
             if self.color_norm_method is not None:
                 if self.color_norm_method == 'reinhard':
-                    target_mean = np.load("/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/color_normalization/ref/merge_tiles_lab_mean.npy")
-                    target_std = np.load("/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/color_normalization/ref/merge_tiles_lab_std.npy")
+                    target_mean = np.load("../color_normalization/ref/merge_tiles_lab_mean.npy")
+                    target_std = np.load("../color_normalization/ref/merge_tiles_lab_std.npy")
                     img = histomicstk.preprocessing.color_normalization.reinhard(np.asarray(img), target_mu=target_mean, target_sigma=target_std)
                     
                 elif self.color_norm_method == 'macenko_pca':
-                    wc_target = np.load("/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/color_normalization/ref/wc_pca.npy")
+                    wc_target = np.load("../color_normalization/ref/wc_pca.npy")
                     try:
                         wc_pca = histomicstk.preprocessing.color_deconvolution.rgb_separate_stains_macenko_pca(np.asarray(img), self.bgr)
                         wc_pca = _reorder_stains(wc_pca, stains=['hematoxylin', 'eosin'] )
