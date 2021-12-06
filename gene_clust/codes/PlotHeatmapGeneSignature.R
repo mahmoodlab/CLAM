@@ -7,18 +7,33 @@
 ### To reproduce the same heatmap, you may need to adjust the cluster name and value of arg 'isReverse' in the dendsort function.
 
 # **************************************************************************************
+# Install package, only do it for the first time
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+BiocManager::install("CancerSubtypes")
+
+install.packages("RColorBrewer")
+
+install.packages('devtools')
+devtools::install_github("jokergoo/ComplexHeatmap")
+
+install.packages('dendextend')
+install.packages("dendsort")
+install.packages("stringr")
+# **************************************************************************************
+
 library(CancerSubtypes)
 library(RColorBrewer)
 # devtools::install_github("jokergoo/ComplexHeatmap")
 library(ComplexHeatmap)
+library('dendextend')
 library(dendsort)
 library(stringr)
-library(viridis)
 
 # **************************************************************************************
-series = 'mondor' # tcga, mondor
+series = 'tcga' # tcga, mondor
 
-path <- paste(dirname(getwd()), "results", series, sep = "/")
+path <- paste(getwd(), "gene_clust", "results", series, sep = "/")
 
 gene_signature = "T-cell_Exhaustion" # 6G_Interferon_Gamma, Gajewski_13G_Inflammatory, Inflammatory, Interferon_Gamma_Biology, Ribas_10G_Interferon_Gamma, T-cell_Exhaustion
 
@@ -73,7 +88,7 @@ hc_col = hclust(dist_col, method = "ward.D2")
 
 if (sreorder) {
   ## May need to change value of arg 'isReverse' to reproduce the same heatmap
-    hc_col = dendsort(hclust(dist(t(data), method = "euclidean"), method = "ward.D2"), isReverse = FALSE, type="average")
+    hc_col = dendsort(hclust(dist(t(data), method = "euclidean"), method = "ward.D2"), isReverse = TRUE, type="average")
   sreorder <- "_reorder"
 } else {
   sreorder <- ""
@@ -154,7 +169,7 @@ my_heatmap <- function(bottom_annotation = NULL) {
   pheatmap(data_scaled,
            main = title,
            name = "Normalized FPKM Matrix",
-           color = rev(brewer.pal(n = 11, name = "RdBu")),# RdYlBu
+           color = rev(brewer.pal(n = 11, name = "RdYlBu")),
            #color = turbo(11, alpha = 1, begin = 0, end = 1), 
            #color = colorRampPalette(c("green", "black", "red"))(n = 1000),
            border_color = NA, 
@@ -247,4 +262,4 @@ draw(q)
 
 # Close heatmap
 dev.off()
-dev.off()
+#dev.off()
