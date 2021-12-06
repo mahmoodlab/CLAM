@@ -1,3 +1,6 @@
+Install Conda Environment for CLAM and Classic MIL
+===========
+
 Create conda environment
 ```shell
 conda env create -n simclr_reprod -f '/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/finally2.yml'
@@ -12,7 +15,7 @@ pip install libtiff openslide_python pyvips gdal mapnik pyproj glymur javabridge
 ```
 
 
-Navigate to a path suitable for cloning new repository and install smooth-topk (topk==1.0)
+Navigate to a path suitable for cloning new repository and install `smooth-topk` (topk==1.0)
 ```shell
 git clone https://github.com/oval-group/smooth-topk.git
 cd smooth-topk
