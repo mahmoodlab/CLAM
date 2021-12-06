@@ -24,7 +24,6 @@ install.packages("stringr")
 
 library(CancerSubtypes)
 library(RColorBrewer)
-# devtools::install_github("jokergoo/ComplexHeatmap")
 library(ComplexHeatmap)
 library('dendextend')
 library(dendsort)
