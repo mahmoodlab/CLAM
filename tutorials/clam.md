@@ -1,5 +1,4 @@
 Tutorial for CLAM Approach (without annotations)
-
 ===========
 
 ***Clustering-constrained Attention Multiple Instance Learning***

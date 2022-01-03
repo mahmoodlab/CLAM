@@ -1,6 +1,4 @@
 Tutorial for MIL Approach (fp, without annotations)
-
-
 ===========
 
 ***Classic Multiple Instance Learning***

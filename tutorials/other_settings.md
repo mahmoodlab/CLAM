@@ -1,5 +1,4 @@
 Tutorial for Saffron Removing / Color Normalization / Data Augmentation
-
 ===========
 
 *Only commands for fp and with annotations are tested and presented as following.*
