@@ -28,7 +28,7 @@ Install the rest pip dependencies
 conda env update --name clam -f docs/clam.yml
 ```shell
 
-
+***
 ***Possible issues and solutions:***
 1. If it fails with `Exception: Error finding javahome on linux: ['bash', '-c', 'java -version']`, and give you a blank output when typing `echo $JAVA_HOME`, you will need to configure java
 ```shell

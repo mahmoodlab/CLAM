@@ -28,6 +28,7 @@ conda activate deepai
 conda deactivate
 ```
 
+***
 ### WSI preparation
 
 #### Tissue segmentation
@@ -59,6 +60,7 @@ python create_patches.py --source PATH_TO_TCGA_WSI --save_dir results --patch_si
 
 Patches extracted from several example WSIs can be found in [**results/patches_examples**](../results/patches_examples) (to play with the follwoing steps). 
 
+***
 ### Label preparation
 1. Prepare a file of slide id. Copy the column *slide_id* from the configuration file **[save_dir]/process_list_autogen.csv** with the extention (e.g. *.svs*) removed, and save as a new csv file (e.g. **tcga_hcc_feature_349.csv**) in the folder **dataset_csv**. 
 2. Preprare WSI labels for each gene signature with **gene_clust/codes/tcga_label_csv_for_clam.ipynb**.
@@ -67,6 +69,8 @@ Patches extracted from several example WSIs can be found in [**results/patches_e
 python create_splits_seq.py --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --seed 1 --label_frac 1 --k 10
 ```
 
+***
+### Deep learning
 #### Training
 ```shell
 CUDA_VISIBLE_DEVICES=0 python train_customed_models.py --early_stopping --patience 2 --min_epochs 5 --lr 5e-5 --reg 1e-5 --opt adam --batch_size 128 --seed 1 --k 10 --k_start -1 --k_end 10 --label_frac 1 --data_dir ./results/patches --trnsfrms imagenet --results_dir ./results/training_custom --exp_code tcga_hcc_349_Inflammatory_cv_highvsrest_622_shufflenet_frz3_imagenet --train_weighting --bag_loss ce --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type shufflenet --freeze 3 --log_data > log_Inflammatory_shufflenet_frz3_imagenet.txt

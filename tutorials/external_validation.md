@@ -5,6 +5,8 @@ The first four steps are shared by all the three deep learning approaches.
 
 ***Tissue segmentation - patch extraction - label preparation - dataset splitting***
 
+### WSI preparation
+
 #### Tissue segmentation
 
 ##### Without annotations

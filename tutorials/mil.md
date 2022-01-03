@@ -24,6 +24,7 @@ OS: Linux (Tested on Ubuntu 18.04)
 The installation will be done along with that of CLAM. Please refer to the tutorial [install_clam](tutorials/install_clam.md)
 
 
+***
 ### WSI preparation
 ```shell
 python create_patches.py --source PATH_TO_TCGA_WSI --save_dir results --patch_size 256 --step_size 256 --seg --mask_save_dir results/masks --patch_save_dir results/patches --stitch_save_dir results/stitches
@@ -53,6 +54,8 @@ python create_patches.py --source PATH_TO_TCGA_WSI --save_dir results --patch_si
 
 Patches extracted from several example WSIs can be found in [**results/patches_examples**](../results/patches_examples) (to play with the follwoing steps). 
 
+
+***
 ### Label preparation
 1. Prepare a file of slide id. Copy the column *slide_id* from the configuration file **[save_dir]/process_list_autogen.csv** with the extention (e.g. *.svs*) removed, and save as a new csv file (e.g. **tcga_hcc_feature_349.csv**) in the folder **dataset_csv**. 
 2. Preprare WSI labels for each gene signature with **gene_clust/codes/tcga_label_csv_for_clam.ipynb**.
@@ -61,6 +64,8 @@ Patches extracted from several example WSIs can be found in [**results/patches_e
 python create_splits_seq.py --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --seed 1 --label_frac 1 --k 10
 ```
 
+***
+### Deep learning
 #### Feature extraction
 ```shell
 CUDA_VISIBLE_DEVICES=0 python extract_features.py --data_dir results/patches --csv_path ./dataset_csv/tcga_hcc_feature_349.csv --feat_dir results/features --batch_size 256
