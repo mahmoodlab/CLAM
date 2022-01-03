@@ -52,6 +52,8 @@ For 40x WSIs, we need to downsample to 20x as there is no such a native level
 python create_patches.py --source PATH_TO_TCGA_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --custom_downsample 2 --process_list process_list_edited_40x.csv --patch --stitch --mask_save_dir results/masks_tumor_masked --patch_save_dir results/patches_tumor_masked --stitch_save_dir results/stitches_tumor_masked --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
 ```
 
+Patches extracted from several example WSIs can be found in [**results/patches_examples**](https://github.com/qinghezeng/CLAM/tree/master/results/patches_examples) (to play with the follwoing steps). 
+
 ### Label preparation
 1. Prepare a file of slide id. Copy the column *slide_id* from the configuration file **[save_dir]/process_list_autogen.csv** with the extention (e.g. *.svs*) removed, and save as a new csv file (e.g. **tcga_hcc_feature_349.csv**) in the folder **dataset_csv**. 
 2. Preprare WSI labels for each gene signature with **gene_clust/codes/tcga_label_csv_for_clam.ipynb**.

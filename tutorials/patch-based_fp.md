@@ -17,7 +17,7 @@ sudo apt-get install openslide-tools
 ```
 3. Create conda environment with **deepai.yml**:
 ```shell
-conda env create -n clam -f docs/deepai.yaml
+conda env create -n deepai -f docs/deepai.yml
 ```
 4. Activate the conda environment:
 ```shell
