@@ -66,7 +66,7 @@ python create_splits_seq.py --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 -
 #### Feature extraction
 ```shell
 CUDA_VISIBLE_DEVICES=0 python extract_features.py --data_dir results/patches_tumor_masked--csv_path ./dataset_csv/tcga_hcc_feature_349.csv --feat_dir results/features_tumor_masked --batch_size 256
-```shell
+```
 
 
 #### Training

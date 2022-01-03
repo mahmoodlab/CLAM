@@ -81,6 +81,7 @@ CUDA_VISIBLE_DEVICES=0 python eval_customed_models_fp.py --batch_size 128 --seed
 ```shell
 CUDA_VISIBLE_DEVICES=0 python eval_customed_models_slide_aggregation.py --eval_dir ./eval_results_349_custom --save_exp_code EVAL_tcga_hcc_349_Inflammatory_cv_highvsrest_622_shufflenet_frz3_imagenet_s1_cv --k 10
 ```
+Without passing the *--thresholds_dir* explicitly, the optimal threshold will be automatically calculated on the current test data.
 
 
 

@@ -65,7 +65,7 @@ python create_splits_seq.py --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 -
 #### Feature extraction
 ```shell
 CUDA_VISIBLE_DEVICES=0 python extract_features.py --data_dir results/patches_tumor_masked--csv_path ./dataset_csv/tcga_hcc_feature_349.csv --feat_dir results/features_tumor_masked --batch_size 256
-```shell
+```
 
 
 #### Training
@@ -86,10 +86,8 @@ CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --data_dir results/featu
 
 #### Extract attention scores
 Calculate the attention scores and visualize the attention map for interpretability. The user could pass *--fold* for a specific fold (e.g. 5), or *--k_start* and *--k_end* to specify a fold range, otherwise the default will process all the *k* folds.
-
-Here we used TCGA test set for example:
 ```shell
-CUDA_VISIBLE_DEVICES=0 python attention_score.py --drop_out --k 10 --results_dir ./results/training_gene_signatures_tumor_masked -models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --save_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1_cv --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type clam_sb --model_size small --data_dir ./results/features_tumor_masked --fold 5
+python attention_score.py --drop_out --k 10 --results_dir ./results/training_gene_signatures_tumor_masked -models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --save_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1_cv --task tcga_hcc_349_Inflammatory_cv_highvsrest_622 --model_type clam_sb --model_size small --data_dir ./results/features_tumor_masked --fold 5
 ```
 #### Construct attention maps
 ```shell
