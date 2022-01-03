@@ -39,7 +39,7 @@ parser.add_argument('--target_patch_size', type=int, default=-1,
                     help='the desired size of patches for optional scaling before feature embedding')
 ###*********************************
 #Modified by Qinghe 11/11/2021, for data augmentation
-parser.add_argument('--train_augm', default=False, action='store_true')
+parser.add_argument('--train_augm', default=False, action='store_true', help='data augmentation')
 args = parser.parse_args()    
 
 #%%
