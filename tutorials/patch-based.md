@@ -58,8 +58,6 @@ For 40x WSIs, we need to downsample to 20x as there is no such a native level
 python create_patches.py --source PATH_TO_TCGA_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --custom_downsample 2 --process_list process_list_edited_40x.csv --patch --stitch --mask_save_dir results/masks --patch_save_dir results/patches --stitch_save_dir results/stitches
 ```
 
-Patches extracted from several example WSIs can be found in [**results/patches_examples**](../results/patches_examples) (to play with the follwoing steps). 
-
 ***
 ### Label preparation
 1. Prepare a file of slide id. Copy the column *slide_id* from the configuration file **[save_dir]/process_list_autogen.csv** with the extention (e.g. *.svs*) removed, and save as a new csv file (e.g. **tcga_hcc_feature_349.csv**) in the folder **dataset_csv**. 
