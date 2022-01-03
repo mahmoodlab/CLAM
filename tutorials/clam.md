@@ -16,7 +16,7 @@ Tutorial for CLAM Approach (without annotations)
 [Interactive Demo](http://clam.mahmoodlab.org) 
 
 
-*** Installation - tissue segmentation - patch extraction - label preparation - feature extraction - dataset splitting - training - training visulaization - inference - extract attention scores - construct attention maps ***
+***Installation - tissue segmentation - patch extraction - label preparation - feature extraction - dataset splitting - training - training visulaization - inference - extract attention scores - construct attention maps***
 
 
 #### Installation

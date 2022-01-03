@@ -5,7 +5,7 @@ Tutorial for Patch-Based Approach (with annotations)
 *Kather, J. N., Heij, L. R., Grabsch, H. I., Loeffler, C., Echle, A., Muti, H. S., ... & Luedde, T. (2020). Pan-cancer image-based detection of clinically actionable genetic alterations. Nature cancer, 1(8), 789-799.*
 
 
-*** Installation - tissue segmentation - patch extraction - label preparation - dataset splitting - training - inference - WSI-level aggregation ***
+***Installation - tissue segmentation - patch extraction - label preparation - dataset splitting - training - inference - WSI-level aggregation***
 
 
 #### Installation

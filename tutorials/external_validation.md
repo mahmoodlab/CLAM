@@ -3,7 +3,7 @@ Tutorial for External Validation
 
 The first four steps are shared by all the three deep learning approaches.
 
-*** Tissue segmentation - patch extraction - label preparation - dataset splitting ***
+***Tissue segmentation - patch extraction - label preparation - dataset splitting***
 
 #### Tissue segmentation
 
@@ -78,7 +78,7 @@ python create_splits_seq.py --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X
 ***
 ### Approach 1: Patch-based strategy
 
-*** Inference - WSI-level aggregation ***
+***Inference - WSI-level aggregation***
 
 #### Inference
 ##### without annotations
@@ -112,7 +112,7 @@ CUDA_VISIBLE_DEVICES=0 python eval_customed_models_slide_aggregation.py --eval_d
 ***
 ### Approach 2: Classic MIL
 
-*** Feature extraction - inference ***
+***Feature extraction - inference***
 
 #### Feature extraction
 ##### without annotations
@@ -145,7 +145,7 @@ CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 -
 ***
 ### Approach 3: CLAM
 
-*** Feature extraction - inference - extract attention scores - construct attention maps ***
+***Feature extraction - inference - extract attention scores - construct attention maps***
 
 #### Feature extraction
 ##### without annotations

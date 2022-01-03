@@ -17,7 +17,7 @@ Tutorial for MIL Approach (fp, with annotations)
 [Original Github repository](https://github.com/mahmoodlab/CLAM) © [Mahmood Lab](http://www.mahmoodlab.org)
 
 
-*** Installation - tissue segmentation - patch extraction - label preparation - feature extraction - dataset splitting - training - training visulaization - inference***
+***Installation - tissue segmentation - patch extraction - label preparation - feature extraction - dataset splitting - training - training visulaization - inference***
 
 
 #### Installation
