@@ -193,6 +193,7 @@ CUDA_VISIBLE_DEVICES=0 python attention_map.py --eval_dir ./eval_results_349 --s
 ##### with annotations
 ```shell
 CUDA_VISIBLE_DEVICES=0 python attention_map.py --eval_dir ./eval_results_349_tumor_masked --save_exp_code mondor_hcc_tumor-masked_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --k 10 --B 8 --downscale 4 --snapshot --grayscale --colormap --blended --data_root_dir ./results/patches_mondor_tumor_masked --fold 5
+```
 ##### fp, without annotations
 ```shell
 CUDA_VISIBLE_DEVICES=0 python attention_map_fp.py --eval_dir ./eval_results_349 --save_exp_code mondor_hcc_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --k 10 --B 8 --downscale 4 --snapshot --grayscale --colormap --blended --data_root_dir ./results/patches-fp_mondor --data_slide_dir PATH_TO_MONDOR_WSI --target_patch_size 256 --fold 5

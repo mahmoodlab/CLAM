@@ -37,7 +37,7 @@ python create_patches_fp.py --source PATH_TO_TCGA_WSI --save_dir results --patch
 ```
 
 A segmentation example presented on the right (green --> tissue, blue --> holes, red --> tumor annotations).
-<img src="docs/seg_anno_A9H4.jpg" width="350px" align="right" />
+<img src="https://github.com/qinghezeng/CLAM/tree/master/docs/seg_anno_A9H4.jpg" width="350px" align="right" />
 
 After having a satifying segmentation, here we seperate the modified configuration file into 2 files (**process_list_edited_20x.csv** and **process_list_edited_40x.csv**), for WSIs whose highest magnification are 20x and 40x, respectively. It would facilitate the next step as the patching commands for two kinds of WSIs are slightly different, otherwise the values of *process* column will have to modified to select WSI(s) to process (1 means to select while 0 means to exlude).
 
@@ -51,8 +51,6 @@ For 40x WSIs, we need to downsample to 20x as there is no such a native level
 ```shell
 python create_patches_fp.py --source PATH_TO_TCGA_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --custom_downsample 2 --process_list process_list_edited_40x.csv --patch --stitch --mask_save_dir results/masks_tumor_masked --patch_save_dir results/patches-fp_tumor_masked --stitch_save_dir results/stitches_tumor_masked --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
 ```
-
-Patches extracted from several example WSIs can be found in [**results/patches-fp_examples**](https://github.com/qinghezeng/CLAM/tree/master/results/patches-fp_examples) (to play with the follwoing steps). 
 
 ### Label preparation
 1. Prepare a file of slide id. Copy the column *slide_id* from the configuration file **[save_dir]/process_list_autogen.csv** with the extention (e.g. *.svs*) removed, and save as a new csv file (e.g. **tcga_hcc_feature_349.csv**) in the folder **dataset_csv**. 

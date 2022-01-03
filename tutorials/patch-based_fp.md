@@ -5,7 +5,7 @@ Tutorial for Patch-Based Approach (fp, without annotations)
 *Kather, J. N., Heij, L. R., Grabsch, H. I., Loeffler, C., Echle, A., Muti, H. S., ... & Luedde, T. (2020). Pan-cancer image-based detection of clinically actionable genetic alterations. Nature cancer, 1(8), 789-799.*
 
 
-***Installation - tissue segmentation - patch extraction - label preparation - dataset splitting - training - inference - WSI-level aggregation***
+*** Installation - tissue segmentation - patch extraction - label preparation - dataset splitting - training - inference - WSI-level aggregation ***
 
 
 #### Installation
@@ -42,7 +42,7 @@ python create_patches_fp.py --source PATH_TO_TCGA_WSI --save_dir results --patch
 ```
 
 A segmentation example presented on the right (green --> tissue, blue --> holes).
-<img src="docs/seg_A9H4.jpg" width="350px" align="right" />
+<img src="https://github.com/qinghezeng/CLAM/tree/master/docs/seg_A9H4.png" width="350px" align="right" />
 
 After having a satifying segmentation, here we seperate the modified configuration file into 2 files (**process_list_edited_20x.csv** and **process_list_edited_40x.csv**), for WSIs whose highest magnification are 20x and 40x, respectively. It would facilitate the next step as the patching commands for two kinds of WSIs are slightly different, otherwise the values of *process* column will have to modified to select WSI(s) to process (1 means to select while 0 means to exlude).
 
