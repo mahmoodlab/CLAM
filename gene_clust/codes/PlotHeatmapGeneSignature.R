@@ -183,12 +183,15 @@ my_heatmap <- function(bottom_annotation = NULL) {
            left_annotation = rowAnnotation(df = cluster_row,
                                            col = list('Gene' = row_anno_colors), # Gene.Clusters
                                            annotation_name_side = "top", show_annotation_name = FALSE,
+                                           #show_legend = c("bar" = FALSE), # turn off color bar/legend
                                            annotation_name_rot = 90),
            top_annotation = HeatmapAnnotation(df = cluster_col, 
                                               col = list('Sample' = col_anno_colors),   # # Sample.Clusters, annotation_name_rot = 90) only 4 angles
+                                              #show_legend = c("bar" = FALSE), # turn off color bar/legend
                                               show_annotation_name = FALSE),
            bottom_annotation = bottom_annotation,
            annotation_legend = TRUE, 
+           #legend=FALSE, # turn off color bar/legend 
            scale = 'none')
 }
 

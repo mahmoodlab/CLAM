@@ -15,13 +15,8 @@ from scipy import stats
 from wsi_core.WholeSlideImage import DrawMap, StitchPatches
 from tqdm import tqdm
 
-## tcga
-#path_tumor = "/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/results/patches_tumor"
-path_tumor = "/media/visiopharm5/WDRed(backup)/clam_extension/results/patches_tumor_masked"
-path_stitch = "/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/results/stitches_tumor_masked"
-# mondor
-#path_tumor = "/media/visiopharm5/WDRed(backup)/clam_extension/results/patches_tcga_tumor_nobgr"
-#path_stitch = "/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/results/stitches_tumor_nobgr"
+path_tumor = "./results/patches_tumor_masked"
+path_stitch = "./results/stitches_tumor_masked"
 
 os.makedirs(path_stitch, exist_ok=True)
 

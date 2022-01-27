@@ -300,7 +300,7 @@ args = parser.parse_args()
 #parser = argparse.ArgumentParser(description='seg and patch')
 #args = parser.parse_args()
 #
-#args.source = "/media/visiopharm5/WDRed(backup)/clam_extension/data/data_tcga_hcc" #'./results/patches_tumor'
+#args.source = "./data/data_tcga_hcc"
 #args.step_size = 256
 #args.patch_size = 256
 #args.patch = True
@@ -312,11 +312,11 @@ args = parser.parse_args()
 #args.patch_level = 0
 #args.custom_downsample = 2 # most are 40x
 #args.process_list = 'process_list_test.csv'
-#args.mask_save_dir = '/media/visiopharm5/WDRed(backup)/clam_extension/results/test/masks_test'
-#args.patch_save_dir = '/media/visiopharm5/WDRed(backup)/clam_extension/results/test/patches_test'
-#args.stitch_save_dir = '/media/visiopharm5/WDRed(backup)/clam_extension/results/test/stitches_test'
+#args.mask_save_dir = './results/test/masks_test'
+#args.patch_save_dir = './results/test/patches_test'
+#args.stitch_save_dir = './results/test/stitches_test'
 #args.use_annotations = False
-#args.annotation_dir = '/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/data/annotations'
+#args.annotation_dir = './data/annotations'
 
 #%%
 

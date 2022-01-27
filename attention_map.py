@@ -53,7 +53,7 @@ args = parser.parse_args()
 #parser = argparse.ArgumentParser(description='CLAM Attention Map Script')
 #args = parser.parse_args()
 #
-#args.data_root_dir = "/media/visiopharm5/WDRed(backup)/clam_extension/results/patches_mondor_tumor" #'./results/patches_tumor'
+#args.data_root_dir = "../results/patches_mondor_tumor" #'./results/patches_tumor'
 #args.save_exp_code = 'mondor_hcc_tumor_258_Gajewski_13G_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv'
 #args.k = 10
 #args.k_start = -1
@@ -153,7 +153,7 @@ if __name__ == "__main__":
             for key in f.keys():
                 print(key) # Names of the groups in HDF5 file.
             
-            #file_feature = "/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/results/colorectal/patches/TCGA-A6-6137-01A-01-TS1.58247feb-5bdc-41e1-9075-908a65c40273.h5"
+            #file_feature = "../results/colorectal/patches/TCGA-A6-6137-01A-01-TS1.58247feb-5bdc-41e1-9075-908a65c40273.h5" # test on colorectal
             #f = h5py.File(file_feature, mode='r')
             #
             ## Studying the structure of the file by printing what HDF5 groups are present

@@ -452,7 +452,7 @@ args = parser.parse_args()
 #parser = argparse.ArgumentParser(description='seg and patch')
 #args = parser.parse_args()
 #
-#args.source = "/media/visiopharm5/WDRed(backup)/clam_extension/data/data_tcga_hcc" #'./results/patches_tumor'
+#args.source = "./data/data_tcga_hcc"
 #args.step_size = 256
 #args.patch_size = 256
 #args.patch = True
@@ -465,12 +465,12 @@ args = parser.parse_args()
 #args.custom_downsample = 2 # most are 40x
 #args.process_list = 'process_list_edited_40x.csv'
 #args.mask_save_dir = 'results/masks_tumor'
-#args.patch_save_dir = '/media/visiopharm5/WDRed(backup)/clam_extension/results/patches_tumor_masked'
+#args.patch_save_dir = './results/patches_tumor_masked'
 #args.stitch_save_dir = 'results/stitches_tumor_masked'
 #args.use_annotations = True
 ### 17/10/2021: add annotation type
 #args.annotation_type = None
-#args.annotation_dir = '/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/data/annotations'
+#args.annotation_dir = './data/annotations'
 
 #%%
 

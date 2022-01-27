@@ -27,8 +27,8 @@ parser.add_argument('--no_auto_skip', default=False, action='store_true')
 args = parser.parse_args()
 
 #data_dir = 'results/patches_tumor_masked'
-#result_dir = '/media/visiopharm5/WDRed(backup)/patches-augm-8-flips-rots_mondor_tumor_masked'
-#data_slide_dir = '/media/visiopharm5/WDBlue/hccImmune/clam/data/data_tcga_hcc'
+#result_dir = './results/patches-augm-8-flips-rots_tumor_masked'
+#data_slide_dir = './data/data_tcga_hcc'
 #csv_path = 'dataset_csv/tcga_hcc_feature_354.csv'
 #target_patch_size = 256
 

@@ -534,7 +534,6 @@ class WholeSlideImage(object):
                     if self.isBlackPatch(np.array(patch_PIL), rgbThresh=black_thresh) or self.isWhitePatch(np.array(patch_PIL), satThresh=white_thresh): 
                         continue
 
-                # how is 'downsample' used? why not save the custom downsample to it? But we can still get it from 'downsampled_level_dim'
                 patch_info = {'x':x // (patch_downsample[0] * custom_downsample), 'y':y // (patch_downsample[1] * custom_downsample), 'cont_idx':cont_idx, 'patch_level':patch_level, 
                 'downsample': self.level_downsamples[patch_level], 'downsampled_level_dim': tuple(np.array(self.level_dim[patch_level])//custom_downsample), 'level_dim': self.level_dim[patch_level],
                 'patch_PIL':patch_PIL, 'name':self.name, 'save_path':save_path}  # the printed x and patch_PIL is at the actual magnification
@@ -830,7 +829,6 @@ class WholeSlideImage(object):
         if len(results)>1:
             asset_dict = {'coords' :          results} # at the existed level, but I DON'T THINK IT A GOOD IDEA, better at actual magnification just like not fp
             
-            # Strange for me why don't save the custom_downsample, not convinent to input it when extracting feature fp
             attr = {'patch_size' :            patch_size, # To be considered...
                     'patch_level' :           patch_level,
                     'downsample':             self.level_downsamples[patch_level],

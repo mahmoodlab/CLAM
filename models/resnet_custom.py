@@ -179,7 +179,7 @@ def resnet152_torchvision(pretrained=False):
 
 def densenet121_torchvision(pretrained=False):
     """ desnet121 from torchvision
-        Have to first modify "/home/visiopharm5/anaconda3/envs/clam/lib/python3.7/site-packages/torchvision/models/densenet.py"
+        Have to first modify ".../anaconda3/envs/clam/lib/python3.7/site-packages/torchvision/models/densenet.py"
         Otherwise will get a KeyError: 'module name can\'t contain "."'
     """
     model = torchvision.models.densenet121(pretrained=pretrained)

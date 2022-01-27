@@ -4,8 +4,8 @@
 Created on Wed May 12 18:43:36 2021
 Key workflow:
 1. Downscale from the splitting magnification (20x) ['downscale']
-2. Load in the dim of 20x ['downsampled_level_dim'] from the slide_info (extracted using openslide by checking the highest magnfication, so no exception, one file for all the 3 mondor slide cases)
-3. Calcaluate dim on acutal stitching magnification ['w', 'h'] and the downsampled level ['vis_level'] in slide
+2. Load in the dim of 20x ['downsampled_level_dim'] from the slide (extracted using openslide by checking the highest magnfication, so no exception, one file for all the 3 mondor slide cases)
+3. Calculate dim on acutal stitching magnification ['w', 'h'] and the downsampled level ['vis_level'] in slide
 4. Stitching at the downsampled level (existed): atually no problem for snapshot, colormap, grayscale
 5. Reisze the stitched images: so blended (here checked work for tcga and mondor with downscale<256)
 
@@ -41,7 +41,7 @@ parser = argparse.ArgumentParser(description='CLAM Attention Map Script')
 parser.add_argument('--data_root_dir', type=str, default=None,
                     help='data directory')
 parser.add_argument('--eval_dir', type=str, default='./eval_results',
-					help='directory to save eval results')
+                    help='directory to save eval results')
 parser.add_argument('--save_exp_code', type=str, default=None,
                     help='experiment code to save eval results')
 #parser.add_argument('--bestk', type=int, default=10, help='the fold of the best model (default: 10)')
@@ -216,17 +216,28 @@ if __name__ == "__main__":
             # 'downsampled_level_dim', 'level_dim', 'name', 'patch_level'==0 or 1, 'patch_size', 'save_path'
 #            for k in range(len(f["imgs"].attrs.values())): 
 #                dset.attrs[list(f["imgs"].attrs.keys())[k]] = list(f["imgs"].attrs.values())[k]
-            if patch_bags[i].startswith('TCGA'):
-                slide_info = pd.read_csv('/media/visiopharm5/WDRed(backup)/clam_extension/data/slide_info_tcga.csv')
-            elif patch_bags[i].startswith('HMNT'):
-                slide_info = pd.read_csv('/media/visiopharm5/WDGold/deeplearning/Hepatocarcinomes/slides_annotations_hammamatsu/slide_info_mondor.csv')
-            else:
-                raise ValueError('No slide info found! Please check the input slide set.')
+           
+            with openslide.open_slide(slide_file_path) as wsi:
+                if slide_file_path.endswith("ndpi"):
+                    if (wsi.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER] == '20'): # 20x(no exception magnification)~= 0.5 or 1.0 (not correctly recognized)
+                        downsample = 1.0
+                    elif (wsi.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER] == '40'): # 40x pixelsize ~= 0.25
+                        downsample = 2.0
+                    else:
+                        raise Exception("The highest magnification should be 20x or 40x.")
+            
+                elif slide_file_path.endswith(".svs"):
+                    if (wsi.properties['aperio.AppMag'] == '20'): # 20x (no exception magnification) ~= 0.5 or 1.0 (not correctly recognized)
+                        downsample = 1.0
+                    elif (wsi.properties['aperio.AppMag'] == '40'): # 40x pixelsize ~= 0.25
+                        downsample = 2.0
+                    else:
+                        raise Exception("The highest magnification should be 20x or 40x.")
+    
+                dset_attrs_downsampled_level_dim = np.asarray([np.int64(math.floor(wsi.dimensions[0]/downsample)), np.int64(math.floor(wsi.dimensions[1]/downsample))])
+                dset_attrs_level_dim = np.asarray([np.int64(wsi.dimensions[0]), np.int64(wsi.dimensions[1])])
+               
             dset_attrs_downsample = np.asarray([np.float64(1), np.float(1)])
-            dset_attrs_downsampled_level_dim = np.asarray([np.int64(slide_info[slide_info['wsi_name']==os.path.splitext(patch_bags[i])[0]]['downsampled_level_dim'].values[0].split(', ')[0]), 
-                      np.int64(slide_info[slide_info['wsi_name']==os.path.splitext(patch_bags[i])[0]]['downsampled_level_dim'].values[0].split(', ')[1])])
-            dset_attrs_level_dim = np.asarray([np.int64(slide_info[slide_info['wsi_name']==os.path.splitext(patch_bags[i])[0]]['level_dim'].values[0].split(', ')[0]), 
-                      np.int64(slide_info[slide_info['wsi_name']==os.path.splitext(patch_bags[i])[0]]['level_dim'].values[0].split(', ')[1])])
             dset_attrs_patch_level = np.int64(0)
             dset_attrs_wsi_name = os.path.splitext(patch_bags[i])[0]
 
@@ -284,7 +295,7 @@ if __name__ == "__main__":
                     # 25/05/2021, for fast pipeline
 #                    im = Image.fromarray(f["imgs"][ind])
                     coords = f["coords"][ind]
-			
+            
                     with openslide.open_slide(slide_file_path) as wsi:
                         im = wsi.read_region(coords, patch_level, (patch_size, patch_size)).convert('RGB')
             

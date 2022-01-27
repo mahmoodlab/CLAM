@@ -47,11 +47,11 @@ args = parser.parse_args()
 # parser = argparse.ArgumentParser(description='Feature Extraction')
 # args = parser.parse_args()
 
-# args.data_dir = "/media/visiopharm5/WDRed(backup)/clam_extension/results/patches_mondor_tumor"
+# args.data_dir = "./results/patches_mondor_tumor"
 # args.csv_path = "./dataset_csv/mondor_hcc_feature_139.csv" 
 # args.feat_dir = "./results/features_trained_custom/tcga_hcc_tumor_349_v1_cv_highvsrest_622_shufflenet-frz3_imagenet_s1"
 # args.model = "shufflenet"
-# args.weight = "/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/results/training_custom/tcga_hcc_tumor_349_v1_cv_highvsrest_622_shufflenet-frz3_imagenet_s1/s_6_checkpoint.pt"
+# args.weight = "./results/training_custom/tcga_hcc_tumor_349_v1_cv_highvsrest_622_shufflenet-frz3_imagenet_s1/s_6_checkpoint.pt"
 # args.trnsfrms = 'imagenet'
 # args.n_classes = 2
 # args.batch_size = 256

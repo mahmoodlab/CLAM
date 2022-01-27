@@ -33,7 +33,7 @@ args = parser.parse_args()
 # Parameters for test
 #parser = argparse.ArgumentParser(description='Configurations for WSI aggregation')
 #args = parser.parse_args()
-#args.eval_dir = "/media/visiopharm5/WDGold/deeplearning/MIL/CLAM/eval_results_349_custom/fromjeanzay/eval_results_349_custom"
+#args.eval_dir = "./eval_results_349_custom/fromjeanzay/eval_results_349_custom"
 #args.save_exp_code = "EVAL_mondor_hcc_tumor-masked_139_Interferon_Gamma_Biology_cv_highvsrest_00X_shufflenet_frz3_imagenet_s1_cv"
 #args.thresholds_dir = "EVAL_mondor_hcc_tumor-masked_139_Interferon_Gamma_Biology_cv_highvsrest_00X_shufflenet_frz3_imagenet_s1_cv"
 #args.k = 10

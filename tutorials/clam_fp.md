@@ -92,7 +92,7 @@ python attention_score.py --drop_out --k 10 --results_dir ./results/training_gen
 ```
 #### Construct attention maps
 ```shell
-CUDA_VISIBLE_DEVICES=0 python attention_map_fp.py --eval_dir ./eval_results_349 --save_exp_code tcga_hcc_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1_cv --k 10 --B 8 --downscale 4 --snapshot --grayscale --colormap --blended --data_root_dir ./results/patches --data_slide_dir PATH_TO_TCGA_WSI --target_patch_size 256 --fold 5
+CUDA_VISIBLE_DEVICES=0 python attention_map_fp.py --eval_dir ./eval_results_349 --save_exp_code tcga_hcc_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1_cv --k 10 --B 8 --downscale 4 --snapshot --grayscale --colormap --blended --data_root_dir ./results/patches-fp --data_slide_dir PATH_TO_TCGA_WSI --target_patch_size 256 --fold 5
 ```
 The user could pass *--tp* to process only for the true possitive. In this case, a new csv file named **fold_5_optimal_tcga.csv** need to be prepared in evaluation result folder (**eval_results_349/EVAL_tcga_hcc_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1_cv**) by adding a 8th column idicating whether this row is a true prediction to **fold_5.csv**.
 
