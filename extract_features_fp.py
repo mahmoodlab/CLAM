@@ -107,8 +107,10 @@ parser = argparse.ArgumentParser(description='Feature Extraction')
 parser.add_argument('--data_dir', type=str, help='path to h5 files')
 ###*********************************
 parser.add_argument('--data_slide_dir', type=str, default=None, help='path to slides (ndpi and svs accepted by default)')
-###********* 15/05/2021, improve to remove the input --slide_ext
-#parser.add_argument('--slide_ext', type=str, default= '.svs')
+###********* 15/05/2021, improve to remove the input --slide_ext	
+#parser.add_argument('--slide_ext', type=str, default= '.svs')	
+###********* 02/02/2021, reuse to enable custom ext	
+parser.add_argument('--slide_ext', nargs="+", default= ['.svs', '.ndpi', '.tiff'], help='slide extensions to be recognized, svs/ndpi/tiff by default')
 parser.add_argument('--csv_path', type=str, default=None)
 parser.add_argument('--feat_dir', type=str, default=None)
 parser.add_argument('--batch_size', type=int, default=256)
@@ -223,7 +225,7 @@ if __name__ == '__main__':
         ###********* 15/05/2021, improve to remove the input --slide_ext
         #slide_file_path = os.path.join(args.data_slide_dir, bag_name.replace('.h5', args.slide_ext))
         # priority: NOT, AND, OR!!
-        slide_file_path = os.path.join(args.data_slide_dir, [sli for sli in os.listdir(args.data_slide_dir) if (sli.endswith('.ndpi') or sli.endswith('.svs')) and 
+        slide_file_path = os.path.join(args.data_slide_dir, [sli for sli in os.listdir(args.data_slide_dir) if sli.endswith(tuple(args.slide_ext)) and 
                            sli.startswith(os.path.splitext(bag_name)[0])][0])
         ###*********
         print('\nprogress: {}/{}'.format(bag_candidate_idx, total))

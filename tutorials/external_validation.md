@@ -180,11 +180,11 @@ CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --k_start 0 --k_end 10 -
 #### Extract attention scores
 ##### without annotations
 ```shell
-python attention_score.py --drop_out --k 10 --results_dir ./results/training_gene_signatures --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100  -models_exp_code tcga_hcc_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349 --save_exp_code mondor_hcc_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb  --model_size small --data_dir ./results/features --fold 5
+python attention_score.py --drop_out --k 10 --results_dir ./results/training_gene_signatures --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --models_exp_code tcga_hcc_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349 --save_exp_code mondor_hcc_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb  --model_size small --data_dir ./results/features --fold 5
 ```
 ##### with annotations
 ```shell
-python attention_score.py --drop_out --k 10 --results_dir ./results/training_gene_signatures_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100  -models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked --save_exp_code mondor_hcc_tumor-masked_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb  --model_size small --data_dir ./results/features_tumor_masked --fold 5
+python attention_score.py --drop_out --k 10 --results_dir ./results/training_gene_signatures_tumor_masked --splits_dir ./splits/mondor_hcc_139_Inflammatory_cv_highvsrest_00X_100 --models_exp_code tcga_hcc_tumor-masked_349_Inflammatory_cv_highvsrest_622_CLAM_50_s1 --eval_dir ./eval_results_349_tumor_masked --save_exp_code mondor_hcc_tumor-masked_139_Inflammatory_cv_highvsrest_00X_CLAM_50_s1_cv --task mondor_hcc_139_Inflammatory_cv_highvsrest_00X --model_type clam_sb  --model_size small --data_dir ./results/features_tumor_masked --fold 5
 ```
 
 #### Construct attention maps

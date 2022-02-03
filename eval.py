@@ -36,7 +36,7 @@ parser.add_argument('--save_exp_code', type=str, default=None,
 parser.add_argument('--models_exp_code', type=str, default=None,
                     help='experiment code to load trained models (directory under results_dir containing model checkpoints')
 parser.add_argument('--splits_dir', type=str, default=None,
-                    help='splits directory, if using custom splits other than what matches the task (default: None)')
+                    help='splits directory, for external validation (default: None, to use the same splits as training)')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', 
                     help='size of model (default: small)')
 parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
