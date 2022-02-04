@@ -25,6 +25,7 @@ python setup.py install
 
 Install the rest pip dependencies
 ```shell
+conda deactivate
 conda env update --name clam -f docs/clam.yml
 ```
 
@@ -38,6 +39,7 @@ sudo apt-get install openjdk-11-jdk
 Add `export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64` to `~/.bashrc`. Verify `echo $JAVA_HOME` again to ensure that you have configured it correctly. And continue the installation
 ```shell
 source ~/.bashrc # for current user
+conda deactivate
 conda env update --name clam -f docs/clam.yml
 ```
 
@@ -45,7 +47,7 @@ conda env update --name clam -f docs/clam.yml
 It should work this time!
 
 
-2. After finishing the installation, if there is the following when executing `pip check` or other command
+2. After finishing the installation, if encounter the following error when executing `pip check` or other command
 `ModuleNotFoundError: No module named '_distutils_hack'`
 
 Update SetupTools with command
@@ -75,7 +77,7 @@ sudo cp ~/Downloads/pixman-0.40.0/libpixman-1.so.0.40.0 ~/anaconda/envs/clam/lib
 
 Now redo the process with the broken image should give correct results.
 
-4.When reinstall the environment or creating a copy, replacing pixman manually (mentioned above) may lead to a potential error:
+4. When reinstall the environment or creating a copy, replacing pixman manually (mentioned above) may lead to a potential error:
 
 `
 SafetyError: The package for pixman located at [YOUR_PATH]/anaconda3/pkgs/pixman-0.38.0-h7b6447c_0
