@@ -228,10 +228,8 @@ dependencies:
     - frozenlist==1.2.0
     - fsspec==2021.10.1
     - future==0.18.2
-    - gdal==3.4.0
     - girder-client==3.1.6
     - girder-slicer-cli-web==1.2.1
-    - glymur==0.9.4
     - google-auth==2.3.3
     - google-auth-oauthlib==0.4.6
     - greenlet==1.1.2
@@ -245,7 +243,6 @@ dependencies:
     - intervaltree==3.0.2
     - isort==4.3.21
     - itsdangerous==1.1.0
-    - javabridge==1.0.19
     - jmespath==0.10.0
     - joblib==0.14.0
     - jsonfield2==3.0.3
@@ -270,7 +267,6 @@ dependencies:
     - locket==0.2.1
     - lxml==4.2.1
     - lz4==2.2.1
-    - mapnik==4.0.0
     - monotonic==1.5
     - more-itertools==8.5.0
     - mpi4py==3.1.1
@@ -310,7 +306,6 @@ dependencies:
     - pyhamcrest==1.9.0
     - pyopenssl==19.1.0
     - pypdf2==1.26.0
-    - pyproj==3.2.1.1
     - pyqt5==5.12.3
     - pyqt5-sip==12.9.0
     - pyqtwebengine==5.12.1
@@ -320,7 +315,6 @@ dependencies:
     - python-javabridge==4.0.3
     - python-utils==2.3.0
     - pytorch-lightning==1.5.3
-    - pyvips==2.1.15
     - pywavelets==1.1.1
     - pyyaml==6.0
     - requests==2.24.0

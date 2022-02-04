@@ -20,7 +20,7 @@ Tutorial for MIL Approach (fp, without annotations)
 
 #### Installation
 OS: Linux (Tested on Ubuntu 18.04) 
-The installation will be done along with that of CLAM. Please refer to the tutorial [install_clam](tutorials/install_clam.md)
+The installation will be done along with that of CLAM. Please refer to the tutorial [install_clam](./install_clam.md)
 
 
 ***

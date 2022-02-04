@@ -20,7 +20,7 @@ Tutorial for CLAM Approach (fp, without annotations)
 
 #### Installation
 OS: Linux (Tested on Ubuntu 18.04) 
-Please refer to the tutorial [install_clam](tutorials/install_clam.md)
+Please refer to the tutorial [install_clam](./install_clam.md)
 
 ***
 ### WSI preparation
