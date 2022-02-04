@@ -63,16 +63,16 @@ Thus reinstall the previous version
 pip install setuptools==41.0.0
 ```
 
-Now it should output `No broken requirements found.` when executing `pip check` again.
+Now it should output `No broken requirements found` when executing `pip check` again.
 
 3. For the following segmentation/patching step, if you meet with imcomplete mask (left) or dirty stitched image (right), 
 
 <img src="../docs/incomplete_mask_AAVV.png" width="350px" align="below" />    <img src="../docs/dirty_stitched_A95S.jpg" width="300px" align="below" />
 
-it is an issue related to pixman 0.38. To solve this, please download `pixman-0.40.0.tar.gz` from [this link](https://www.cairographics.org/releases/). After navigating into the extracted directory (e.g. ~/Downloads/pixman-0.40.0), type `./configure` to configure the package for your system and type `make` to compile the package. Now you can find a file named `libpixman-1.so.0.40.0`. Use the following commands to replace the 0.38 version one in the ~/anaconda/lib folder and ~/anaconda/envs/clam/lib folder.
+it is an issue related to pixman 0.38. To solve this, please download `pixman-0.40.0.tar.gz` from [this link](https://www.cairographics.org/releases/). After navigating into the extracted directory (e.g. ~/Downloads/pixman-0.40.0), type `./configure` to configure the package for your system and type `make` to compile the package. Now you can find a file named `libpixman-1.so.0.40.0`. Use the following commands to replace the 0.38 version one in the ~/anaconda3/lib folder and ~/anaconda3/envs/clam/lib folder.
 ```shell
-sudo cp ~/Downloads/pixman-0.40.0/libpixman-1.so.0.40.0 ~/anaconda/lib/libpixman-1.so.0.38.0
-sudo cp ~/Downloads/pixman-0.40.0/libpixman-1.so.0.40.0 ~/anaconda/envs/clam/lib/libpixman-1.so.0.38.0
+sudo cp ~/Downloads/pixman-0.40.0/libpixman-1.so.0.40.0 ~/anaconda3/lib/libpixman-1.so.0.38.0
+sudo cp ~/Downloads/pixman-0.40.0/libpixman-1.so.0.40.0 ~/anaconda3/envs/clam/lib/libpixman-1.so.0.38.0
 ```
 
 Now redo the process with the broken image should give correct results.
