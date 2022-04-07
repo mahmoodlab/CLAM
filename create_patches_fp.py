@@ -144,7 +144,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 			
 			else:	
 				wsi = WSI_object.getOpenSlide()
-				best_level = wsi.get_best_level_for_downsample(64)
+				best_level = - 1
 				current_vis_params['vis_level'] = best_level
 
 		if current_seg_params['seg_level'] < 0:
@@ -153,7 +153,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 			
 			else:
 				wsi = WSI_object.getOpenSlide()
-				best_level = wsi.get_best_level_for_downsample(64)
+				best_level = - 1
 				current_seg_params['seg_level'] = best_level
 
 		keep_ids = str(current_seg_params['keep_ids'])
@@ -170,8 +170,8 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 		else:
 			current_seg_params['exclude_ids'] = []
 
-		w, h = WSI_object.level_dim[current_seg_params['seg_level']] 
-		if w * h > 1e8:
+		h, w = WSI_object.level_dim[current_seg_params['seg_level']]
+		if w * h > 1e12:
 			print('level_dim {} x {} is likely too large for successful segmentation, aborting'.format(w, h))
 			df.loc[idx, 'status'] = 'failed_seg'
 			continue
@@ -224,23 +224,23 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 	return seg_times, patch_times
 
 parser = argparse.ArgumentParser(description='seg and patch')
-parser.add_argument('--source', type = str,
+parser.add_argument('--source', type=str, default='/data/public/HULA/WSIs',
 					help='path to folder containing raw wsi image files')
-parser.add_argument('--step_size', type = int, default=256,
+parser.add_argument('--step_size', type=int, default=1024,
 					help='step_size')
-parser.add_argument('--patch_size', type = int, default=256,
+parser.add_argument('--patch_size', type=int, default=4096,
 					help='patch_size')
-parser.add_argument('--patch', default=False, action='store_true')
-parser.add_argument('--seg', default=False, action='store_true')
-parser.add_argument('--stitch', default=False, action='store_true')
+parser.add_argument('--patch', default=True, action='store_true') # change these back to false when done debugging
+parser.add_argument('--seg', default=True, action='store_true') # change these back to false when done debugging
+parser.add_argument('--stitch', default=True, action='store_true') # change these back to false when done debugging
 parser.add_argument('--no_auto_skip', default=True, action='store_false')
-parser.add_argument('--save_dir', type = str,
+parser.add_argument('--save_dir', type=str, default='/data/public/HULA/WSIs_tissue_masks_CLAM',
 					help='directory to save processed data')
 parser.add_argument('--preset', default=None, type=str,
 					help='predefined profile of default segmentation and filter parameters (.csv)')
-parser.add_argument('--patch_level', type=int, default=0, 
+parser.add_argument('--patch_level', type=int, default=0,
 					help='downsample level at which to patch')
-parser.add_argument('--process_list',  type = str, default=None,
+parser.add_argument('--process_list',  type=str, default=None,
 					help='name of list of images to process with parameters (.csv)')
 
 if __name__ == '__main__':
@@ -272,7 +272,7 @@ if __name__ == '__main__':
 		if key not in ['source']:
 			os.makedirs(val, exist_ok=True)
 
-	seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False,
+	seg_params = {'seg_level': -1, 'sthresh': 12, 'mthresh': 7, 'close': 4, 'use_otsu': False,
 				  'keep_ids': 'none', 'exclude_ids': 'none'}
 	filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8}
 	vis_params = {'vis_level': -1, 'line_thickness': 250}
