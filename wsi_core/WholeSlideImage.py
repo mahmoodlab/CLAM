@@ -8,6 +8,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import openslide
+import tifffile
 from PIL import Image
 import pdb
 import h5py
@@ -17,7 +18,7 @@ import itertools
 from wsi_core.util_classes import isInContourV1, isInContourV2, isInContourV3_Easy, isInContourV3_Hard, Contour_Checking_fn
 from utils.file_utils import load_pkl, save_pkl
 
-Image.MAX_IMAGE_PIXELS = 933120000
+Image.MAX_IMAGE_PIXELS = 93312000000
 
 class WholeSlideImage(object):
     def __init__(self, path):
@@ -27,11 +28,13 @@ class WholeSlideImage(object):
             path (str): fullpath to WSI file
         """
 
-#         self.name = ".".join(path.split("/")[-1].split('.')[:-1])
+        # we need to make modifications to how we retrieve our ROIs; openslide/PIL have issues with Tiffs in general.
         self.name = os.path.splitext(os.path.basename(path))[0]
-        self.wsi = openslide.open_slide(path)
-        self.level_downsamples = self._assertLevelDownsamples()
-        self.level_dim = self.wsi.level_dimensions
+        self.wsi = tifffile.imread(path)
+        self.levels = [1*(2 ** count) for count in range(8)]
+        self.level_downsamples = [(1*(2 ** count), 1*(2 ** count)) for count in range(8)]
+        self.level_dim = tuple([(int(self.wsi.shape[0]//downsamp[0]), int(self.wsi.shape[1]//downsamp[1])) for downsamp in self.level_downsamples])
+
     
         self.contours_tissue = None
         self.contours_tumor = None
@@ -141,8 +144,8 @@ class WholeSlideImage(object):
                 hole_contours.append(filtered_holes)
 
             return foreground_contours, hole_contours
-        
-        img = np.array(self.wsi.read_region((0,0), seg_level, self.level_dim[seg_level]))
+        image_size = self.level_dim[seg_level]
+        img = cv2.resize(self.wsi.copy(), dsize=(image_size[1], image_size[0]))
         img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)  # Convert to HSV space
         img_med = cv2.medianBlur(img_hsv[:,:,1], mthresh)  # Apply median blurring
         
@@ -181,7 +184,7 @@ class WholeSlideImage(object):
         self.contours_tissue = [self.contours_tissue[i] for i in contour_ids]
         self.holes_tissue = [self.holes_tissue[i] for i in contour_ids]
 
-    def visWSI(self, vis_level=0, color = (0,255,0), hole_color = (0,0,255), annot_color=(255,0,0), 
+    def visWSI(self, vis_level=0, color=(0,255,0), hole_color=(0,0,255), annot_color=(255,0,0),
                     line_thickness=250, max_size=None, top_left=None, bot_right=None, custom_downsample=1, view_slide_only=False,
                     number_contours=False, seg_display=True, annot_display=True):
         
@@ -193,11 +196,13 @@ class WholeSlideImage(object):
             bot_right = tuple(bot_right)
             w, h = tuple((np.array(bot_right) * scale).astype(int) - (np.array(top_left) * scale).astype(int))
             region_size = (w, h)
+            image_size = self.level_dim[vis_level]
+            img = cv2.resize(self.wsi.copy(), dsize=(image_size[1], image_size[0]))
+            img = img[top_left[1]:top_left[1]+h, top_left[0]:top_left[0]+w, :]
         else:
             top_left = (0,0)
-            region_size = self.level_dim[vis_level]
-
-        img = np.array(self.wsi.read_region(top_left, vis_level, region_size).convert("RGB"))
+            image_size = self.level_dim[vis_level]
+            img = cv2.resize(self.wsi.copy(), dsize=(image_size[1], image_size[0]))
         
         if not view_slide_only:
             offset = tuple(-(np.array(top_left) * scale).astype(int))
@@ -361,11 +366,11 @@ class WholeSlideImage(object):
     def _assertLevelDownsamples(self):
         level_downsamples = []
         dim_0 = self.wsi.level_dimensions[0]
-        
+
         for downsample, dim in zip(self.wsi.level_downsamples, self.wsi.level_dimensions):
             estimated_downsample = (dim_0[0]/float(dim[0]), dim_0[1]/float(dim[1]))
             level_downsamples.append(estimated_downsample) if estimated_downsample != (downsample, downsample) else level_downsamples.append((downsample, downsample))
-        
+
         return level_downsamples
 
     def process_contours(self, save_path, patch_level=0, patch_size=256, step_size=256, **kwargs):
@@ -519,7 +524,7 @@ class WholeSlideImage(object):
         """
 
         if vis_level < 0:
-            vis_level = self.wsi.get_best_level_for_downsample(32)
+            vis_level = self.levels[-1]
 
         downsample = self.level_downsamples[vis_level]
         scale = [1/downsample[0], 1/downsample[1]] # Scaling from 0 to desired level
