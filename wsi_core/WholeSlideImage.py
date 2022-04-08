@@ -31,8 +31,8 @@ class WholeSlideImage(object):
         # we need to make modifications to how we retrieve our ROIs; openslide/PIL have issues with Tiffs in general.
         self.name = os.path.splitext(os.path.basename(path))[0]
         self.wsi = tifffile.imread(path)
-        self.levels = [1*(2 ** count) for count in range(8)]
-        self.level_downsamples = [(1*(2 ** count), 1*(2 ** count)) for count in range(8)]
+        self.levels = [1*(2 ** count) for count in range(7)]
+        self.level_downsamples = [(1*(2 ** count), 1*(2 ** count)) for count in range(7)]
         self.level_dim = tuple([(int(self.wsi.shape[0]//downsamp[0]), int(self.wsi.shape[1]//downsamp[1])) for downsamp in self.level_downsamples])
 
     
