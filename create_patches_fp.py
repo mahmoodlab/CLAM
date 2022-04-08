@@ -243,7 +243,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
 				print('{} pass completed, optim score: {}'.format(preset, optim_print))
 
-			if np.all(np.array(optim_list) == 1):
+			if np.all(np.array(optim_list) > 0.9):
 				print('WARNING: {} appears to have no ideal configuration for tissue seg. Check slide quality.'.format(WSI_object_pass.name))
 				# pass the run with the most contours
 				contours_counts = [len(x) for x in contours_list]
