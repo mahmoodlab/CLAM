@@ -203,7 +203,7 @@ def DrawMapFromCoords(canvas, wsi_object, coords, patch_size, vis_level, indices
         
         patch_id = indices[idx]
         coord = coords[patch_id]
-        patch = wsi_object.wsi[coord[1]:coord[1]+patch_size[1], coord[0]:coord[0]+patch_size[0], :]
+        patch = wsi_object.wsi[0][coord[1]:coord[1]+patch_size[1], coord[0]:coord[0]+patch_size[0], :]
         patch = patch.copy()
         coord = np.ceil(coord / downsamples).astype(np.int32)
         canvas_crop_shape = canvas[coord[1]:coord[1]+patch_size[1], coord[0]:coord[0]+patch_size[0], :3].shape[:2]
@@ -315,7 +315,7 @@ def SamplePatches(coords_file_path, save_file_path, wsi_object,
     
     for idx in indices:
         coord = coords[idx]
-        patch = wsi_object.wsi.read_region(coord, patch_level, tuple([patch_size, patch_size])).convert('RGB')
+        patch = wsi_object.wsi.read_region(coord, patch_level, tuple([patch_size, patch_size])).convert('RGB') # fix this
         if custom_downsample > 1:
             patch = patch.resize(tuple(target_patch_size))
 

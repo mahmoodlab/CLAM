@@ -1,4 +1,6 @@
 # internal imports
+import cv2
+
 from wsi_core.WholeSlideImage import WholeSlideImage
 from wsi_core.wsi_utils import StitchCoords
 from wsi_core.batch_process_utils import initialize_df
@@ -9,6 +11,7 @@ import time
 import argparse
 import pdb
 import pandas as pd
+import tifffile
 
 def stitching(file_path, wsi_object, downscale = 64):
 	start = time.time()
@@ -100,7 +103,14 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
 		# Inialize WSI
 		full_path = os.path.join(source, slide)
-		WSI_object = WholeSlideImage(full_path)
+		# we load the wsi here and pass it, this is so we can test for failure cases
+		wsi_img = tifffile.imread(full_path)
+		if wsi_img.shape[0] == 0:
+			print('{} was not properly loaded by tifffile. The tiff may be corrupt! Skipping..')
+			df.loc[idx, 'status'] = 'failed_to_load'
+			continue
+
+		WSI_object = WholeSlideImage(full_path, wsi_img)
 
 		if use_default_params:
 			current_vis_params = vis_params.copy()
@@ -171,7 +181,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 			current_seg_params['exclude_ids'] = []
 
 		h, w = WSI_object.level_dim[current_seg_params['seg_level']]
-		if w * h > 1e12:
+		if w * h > 1e14:
 			print('level_dim {} x {} is likely too large for successful segmentation, aborting'.format(w, h))
 			df.loc[idx, 'status'] = 'failed_seg'
 			continue
@@ -182,7 +192,91 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
 		seg_time_elapsed = -1
 		if seg:
-			WSI_object, seg_time_elapsed = segment(WSI_object, current_seg_params, current_filter_params) 
+			# we are going to seg using all of the provided presets, then selecting the segmentation that results in
+			# the maximum number of contours with the minimum total area. To do this, we just optimize an array of
+			# total area/# contours, picking the min. If we have ties, we pick the first. We also set a hard cutoff for
+			# maximum number of contours.
+
+			print('Generating scores for {}, scores close to 0 indicate a strong match, 1 indicates failure.'.format(WSI_object.name))
+
+			contour_cutoff = 8
+			optim_list = []
+			contours_list = []
+			tumor_contours_list = []
+			holes_list = []
+			for preset in os.listdir('presets'):
+				preset_df = pd.read_csv(os.path.join('presets', preset))
+
+				for key in current_seg_params.keys():
+					current_seg_params[key] = preset_df.loc[0, key]
+					if (key == 'keep_ids') or (key == 'exclude_ids'):
+						if preset_df.loc[0, key] == 'none':
+							current_seg_params[key] = []
+
+				for key in current_filter_params.keys():
+					current_filter_params[key] = preset_df.loc[0, key]
+
+				WSI_object_pass, seg_time_elapsed_pass = segment(WSI_object, current_seg_params, current_filter_params)
+
+				if seg_time_elapsed_pass != -1:
+					if seg_time_elapsed == -1:
+						seg_time_elapsed += seg_time_elapsed_pass + 1
+					else:
+						seg_time_elapsed += seg_time_elapsed_pass
+
+				contours_list.append(WSI_object_pass.contours_tissue.copy())
+				holes_list.append(WSI_object_pass.holes_tissue.copy())
+				tumor_contours_list.append([])
+
+				if (len(WSI_object_pass.contours_tissue) == 0) or (len(WSI_object_pass.contours_tissue) > contour_cutoff):
+					optim_list.append(1)
+					optim_print = 1
+
+				else:
+					contour_pixels = 0
+					optim_mult = 1/len(WSI_object_pass.contours_tissue)
+					for contours in WSI_object_pass.contours_tissue:
+						contour_pixels += cv2.contourArea(contours)
+					optim_score = contour_pixels / (WSI_object_pass.level_dim[0][0] * WSI_object_pass.level_dim[0][1])
+					optim_list.append((optim_mult + optim_score) / 2)
+					optim_print = (optim_mult + optim_score) / 2
+
+				print('{} pass completed, optim score: {}'.format(preset, optim_print))
+
+			if np.all(np.array(optim_list) == 1):
+				print('WARNING: {} appears to have no ideal configuration for tissue seg. Check slide quality.'.format(WSI_object_pass.name))
+				# pass the run with the most contours
+				contours_counts = [len(x) for x in contours_list]
+				winner = np.argmax(np.array(contours_counts))
+				df.loc[idx, 'status'] = 'failed_seg'
+
+			else:
+				winner = np.argmin(np.array(optim_list))
+				print('Passes complete, {} provided the best results'.format(
+					os.listdir('presets')[winner]))
+				df.loc[idx, 'status'] = 'processed'
+
+			# update the contours
+			WSI_object.contours_tissue = contours_list[winner]
+			WSI_object.holes_tissue = holes_list[winner]
+			WSI_object.contours_tumor = tumor_contours_list[winner]
+
+			# update params
+			preset_df = pd.read_csv(os.path.join('presets', os.listdir('presets')[winner]))
+
+			for key in current_seg_params.keys():
+				df.loc[idx, key] = preset_df.loc[0, key]
+
+			for key in current_filter_params.keys():
+				df.loc[idx, key] = preset_df.loc[0, key]
+
+			for key in current_vis_params.keys():
+				current_vis_params[key] = preset_df.loc[0, key]
+				df.loc[idx, key] = preset_df.loc[0, key]
+
+			for key in current_patch_params.keys():
+				current_patch_params[key] = preset_df.loc[0, key]
+				df.loc[idx, key] = preset_df.loc[0, key]
 
 		if save_mask:
 			mask = WSI_object.visWSI(**current_vis_params)
@@ -206,7 +300,6 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 		print("segmentation took {} seconds".format(seg_time_elapsed))
 		print("patching took {} seconds".format(patch_time_elapsed))
 		print("stitching took {} seconds".format(stitch_time_elapsed))
-		df.loc[idx, 'status'] = 'processed'
 
 		seg_times += seg_time_elapsed
 		patch_times += patch_time_elapsed
@@ -230,9 +323,9 @@ parser.add_argument('--step_size', type=int, default=1024,
 					help='step_size')
 parser.add_argument('--patch_size', type=int, default=4096,
 					help='patch_size')
-parser.add_argument('--patch', default=True, action='store_true') # change these back to false when done debugging
-parser.add_argument('--seg', default=True, action='store_true') # change these back to false when done debugging
-parser.add_argument('--stitch', default=True, action='store_true') # change these back to false when done debugging
+parser.add_argument('--patch', default=False, action='store_true')
+parser.add_argument('--seg', default=False, action='store_true')
+parser.add_argument('--stitch', default=False, action='store_true')
 parser.add_argument('--no_auto_skip', default=True, action='store_false')
 parser.add_argument('--save_dir', type=str, default='/data/public/HULA/WSIs_tissue_masks_CLAM',
 					help='directory to save processed data')
@@ -272,7 +365,7 @@ if __name__ == '__main__':
 		if key not in ['source']:
 			os.makedirs(val, exist_ok=True)
 
-	seg_params = {'seg_level': -1, 'sthresh': 12, 'mthresh': 7, 'close': 4, 'use_otsu': False,
+	seg_params = {'seg_level': -1, 'sthresh': 11, 'mthresh': 7, 'close': 4, 'use_otsu': False,
 				  'keep_ids': 'none', 'exclude_ids': 'none'}
 	filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8}
 	vis_params = {'vis_level': -1, 'line_thickness': 250}
