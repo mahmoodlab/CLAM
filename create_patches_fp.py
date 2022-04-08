@@ -199,7 +199,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
 			print('Generating scores for {}, scores close to 0 indicate a strong match, 1 indicates failure.'.format(WSI_object.name))
 
-			contour_cutoff = 8
+			contour_cutoff = 10
 			optim_list = []
 			contours_list = []
 			tumor_contours_list = []
