@@ -3,9 +3,9 @@ CLAM <img src="clam-logo.png" width="280px" align="right" />
 Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Images.
 *Nature Biomedical Engineering*
 
-***Fork Info: This fork only adds tifffile support to avoid issues with openslide/PIL related to tiff file formats. This repo will not be supported once full support for tifffile is integrated. Currently, tifffile support is limited to patch, mask, and stitch generation.***
+****Fork Info: This fork only adds tifffile support to avoid issues with openslide/PIL related to tiff file formats. This repo will not be supported once full support for tifffile is integrated. Currently, tifffile support is limited to patch, mask, and stitch generation.****
 
-**Make sure to install both tifffile (`<envbin>/pip install tifffile`) and imagecodecs (`<envbin>/pip install imagecodecs`) before using the repo, along with all other requirements in the docs.**
+***Make sure to install both tifffile (`<envbin>/pip install tifffile`) and imagecodecs (`<envbin>/pip install imagecodecs`) before using the repo, along with all other requirements in the docs.***
 
 [ArXiv](https://arxiv.org/abs/2004.09666) | [Journal Link](https://www.nature.com/articles/s41551-020-00682-w) | [Interactive Demo](http://clam.mahmoodlab.org) | [Cite](#reference) 
 
