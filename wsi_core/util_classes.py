@@ -55,7 +55,7 @@ class isInContourV1(Contour_Checking_fn):
 		self.cont = contour
 
 	def __call__(self, pt): 
-		return 1 if cv2.pointPolygonTest(self.cont, pt, False) >= 0 else 0
+		return 1 if cv2.pointPolygonTest(self.cont, tuple(np.array(pt).astype(float)), False) >= 0 else 0
 
 class isInContourV2(Contour_Checking_fn):
 	def __init__(self, contour, patch_size):
@@ -63,7 +63,8 @@ class isInContourV2(Contour_Checking_fn):
 		self.patch_size = patch_size
 
 	def __call__(self, pt): 
-		return 1 if cv2.pointPolygonTest(self.cont, (pt[0]+self.patch_size//2, pt[1]+self.patch_size//2), False) >= 0 else 0
+		pt = np.array((pt[0]+self.patch_size//2, pt[1]+self.patch_size//2)).astype(float)
+		return 1 if cv2.pointPolygonTest(self.cont, tuple(np.array(pt).astype(float)), False) >= 0 else 0
 
 # Easy version of 4pt contour checking function - 1 of 4 points need to be in the contour for test to pass
 class isInContourV3_Easy(Contour_Checking_fn):
@@ -83,7 +84,7 @@ class isInContourV3_Easy(Contour_Checking_fn):
 			all_points = [center]
 		
 		for points in all_points:
-			if cv2.pointPolygonTest(self.cont, points, False) >= 0:
+			if cv2.pointPolygonTest(self.cont, tuple(np.array(points).astype(float)), False) >= 0:
 				return 1
 		return 0
 
@@ -105,7 +106,7 @@ class isInContourV3_Hard(Contour_Checking_fn):
 			all_points = [center]
 		
 		for points in all_points:
-			if cv2.pointPolygonTest(self.cont, points, False) < 0:
+			if cv2.pointPolygonTest(self.cont, tuple(np.array(points).astype(float)), False) < 0:
 				return 0
 		return 1
 
