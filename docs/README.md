@@ -2,14 +2,13 @@ CLAM <img src="clam-logo.png" width="280px" align="right" />
 ===========
 Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Images.
 *Nature Biomedical Engineering*
-```diff
-+ Red 
-### FORK INFO: ###
+
+### FORK INFO:
 
 Adds tifffile/slideio support to avoid tiff file format related issues that are known to occur when using openslide/PIL. This allows for the user to process very large tiff files (>>4Gb) as long as system memory supports it (images are loaded automatically, with scales 1, 2, 4, 8, 16, 32, 64). This repo will not be updated once full support for tifffile/slideio is integrated. Currently, tifffile/slideio support is limited to fast patch, mask, and stitch generation. Make sure to install tifffile (`<envbin>/pip install tifffile`), imagecodecs (`<envbin>/pip install imagecodecs`), and slideio (`<envbin>/pip install slideio`) before using the repo, along with all other requirements in the docs. 
 
-Additional Features: automatic selection of tissue preprocessing hyperparamters for all preset csvs in /presets. +
-```
+Additional Features: automatic selection of tissue preprocessing hyperparamters for all preset csvs in /presets.
+
 
 [ArXiv](https://arxiv.org/abs/2004.09666) | [Journal Link](https://www.nature.com/articles/s41551-020-00682-w) | [Interactive Demo](http://clam.mahmoodlab.org) | [Cite](#reference) 
 
