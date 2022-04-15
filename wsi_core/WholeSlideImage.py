@@ -166,9 +166,15 @@ class WholeSlideImage(object):
         filter_params['a_h'] = filter_params['a_h'] * scaled_ref_patch_area
         
         # Find and filter contours
-        contours, hierarchy = cv2.findContours(img_otsu, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE) # Find contours 
-        hierarchy = np.squeeze(hierarchy, axis=(0,))[:, 2:]
-        if filter_params: foreground_contours, hole_contours = _filter_contours(contours, hierarchy, filter_params)  # Necessary for filtering out artifacts
+        contours, hierarchy = cv2.findContours(img_otsu, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE) # Find contours
+
+        # stop the next function if we have no contours
+        if len(contours) == 0:
+            hole_contours = []
+            foreground_contours = []
+        else:
+            hierarchy = np.squeeze(hierarchy, axis=(0,))[:, 2:]
+            if filter_params: foreground_contours, hole_contours = _filter_contours(contours, hierarchy, filter_params)  # Necessary for filtering out artifacts
 
         self.contours_tissue = self.scaleContourDim(foreground_contours, scale)
         self.holes_tissue = self.scaleHolesDim(hole_contours, scale)
