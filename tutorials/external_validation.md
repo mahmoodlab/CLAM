@@ -33,40 +33,40 @@ In our external validation dataset (Mondor), there are three types of WSIs: 20x 
 ##### Without annotations
 ```shell
 # 20x_level
-$ python create_patches.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --process_list process_list_edited_mondor_20x.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches_mondor --stitch_save_dir results/stitches_mondor
+python create_patches.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --process_list process_list_edited_mondor_20x.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches_mondor --stitch_save_dir results/stitches_mondor
 # 40x_level1
-$ python create_patches.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 1 --process_list process_list_edited_mondor_40x_level1.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches_mondor --stitch_save_dir results/stitches_mondor
+python create_patches.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 1 --process_list process_list_edited_mondor_40x_level1.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches_mondor --stitch_save_dir results/stitches_mondor
 # 40x_custom
-$ python create_patches.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --custom_downsample 2 --process_list process_list_edited_mondor_40x_custom.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches_mondor --stitch_save_dir results/stitches_mondor
+python create_patches.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --custom_downsample 2 --process_list process_list_edited_mondor_40x_custom.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches_mondor --stitch_save_dir results/stitches_mondor
 ```
 ##### With annotations
 ```shell
 # 20x_level
-$ python create_patches.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --process_list process_list_edited_mondor_20x.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches_mondor --stitch_save_dir results/stitches_mondor --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
+python create_patches.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --process_list process_list_edited_mondor_20x.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches_mondor --stitch_save_dir results/stitches_mondor --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
 # 40x_level1
-$ python create_patches.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 1 --process_list process_list_edited_mondor_40x_level1.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches_mondor --stitch_save_dir results/stitches_mondor --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
+python create_patches.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 1 --process_list process_list_edited_mondor_40x_level1.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches_mondor --stitch_save_dir results/stitches_mondor --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
 # 40x_custom
-$ python create_patches.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --custom_downsample 2 --process_list process_list_edited_mondor_40x_custom.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches_mondor --stitch_save_dir results/stitches_mondor --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
+python create_patches.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --custom_downsample 2 --process_list process_list_edited_mondor_40x_custom.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches_mondor --stitch_save_dir results/stitches_mondor --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
 ```
 
 ##### fp, without annotations
 ```shell
 # 20x_level
-$ python create_patches_fp.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --process_list process_list_edited_mondor_20x.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches-tp_mondor --stitch_save_dir results/stitches_mondor
+python create_patches_fp.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --process_list process_list_edited_mondor_20x.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches-tp_mondor --stitch_save_dir results/stitches_mondor
 # 40x_level1
-$ python create_patches_fp.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 1 --process_list process_list_edited_mondor_40x_level1.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches-tp_mondor --stitch_save_dir results/stitches_mondor
+python create_patches_fp.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 1 --process_list process_list_edited_mondor_40x_level1.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches-tp_mondor --stitch_save_dir results/stitches_mondor
 # 40x_custom
-$ python create_patches_fp.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --custom_downsample 2 --process_list process_list_edited_mondor_40x_custom.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches-tp_mondor --stitch_save_dir results/stitches_mondor
+python create_patches_fp.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --custom_downsample 2 --process_list process_list_edited_mondor_40x_custom.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches-tp_mondor --stitch_save_dir results/stitches_mondor
 ```
 
 ##### fp, with annotations
 ```shell
 # 20x_level
-$ python create_patches_fp.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --process_list process_list_edited_mondor_20x.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches-tp_mondor --stitch_save_dir results/stitches_mondor --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
+python create_patches_fp.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --process_list process_list_edited_mondor_20x.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches-tp_mondor --stitch_save_dir results/stitches_mondor --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
 # 40x_level1
-$ python create_patches_fp.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 1 --process_list process_list_edited_mondor_40x_level1.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches-tp_mondor --stitch_save_dir results/stitches_mondor --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
+python create_patches_fp.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 1 --process_list process_list_edited_mondor_40x_level1.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches-tp_mondor --stitch_save_dir results/stitches_mondor --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
 # 40x_custom
-$ python create_patches_fp.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --custom_downsample 2 --process_list process_list_edited_mondor_40x_custom.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches-tp_mondor --stitch_save_dir results/stitches_mondor --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
+python create_patches_fp.py --source PATH_TO_MONDOR_WSI --save_dir results --patch_size 256 --step_size 256 --seg --patch_level 0 --custom_downsample 2 --process_list process_list_edited_mondor_40x_custom.csv --patch --stitch --mask_save_dir results/masks_mondor --patch_save_dir results/patches-tp_mondor --stitch_save_dir results/stitches_mondor --use_annotations --annotation_type ANNO_FORMAT --annotation_dir PATH_TO_ANNO
 ```
 
 ### Label preparation
