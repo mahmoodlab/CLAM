@@ -186,7 +186,7 @@ def DrawMap(canvas, patch_dset, coords, patch_size, indices=None, verbose=1, dra
     return Image.fromarray(canvas)
 
 def DrawMapFromCoords(canvas, wsi_object, coords, patch_size, vis_level, indices=None, verbose=1, draw_grid=True):
-    downsamples = wsi_object.wsi.level_downsamples[vis_level]
+    downsamples = wsi_object.level_downsamples[vis_level]
     if indices is None:
         indices = np.arange(len(coords))
     total = len(indices)
@@ -203,7 +203,8 @@ def DrawMapFromCoords(canvas, wsi_object, coords, patch_size, vis_level, indices
         
         patch_id = indices[idx]
         coord = coords[patch_id]
-        patch = np.array(wsi_object.wsi.read_region(tuple(coord), vis_level, patch_size).convert("RGB"))
+        patch = wsi_object.wsi[0][coord[1]:coord[1]+patch_size[1], coord[0]:coord[0]+patch_size[0], :]
+        patch = patch.copy()
         coord = np.ceil(coord / downsamples).astype(np.int32)
         canvas_crop_shape = canvas[coord[1]:coord[1]+patch_size[1], coord[0]:coord[0]+patch_size[0], :3].shape[:2]
         canvas[coord[1]:coord[1]+patch_size[1], coord[0]:coord[0]+patch_size[0], :3] = patch[:canvas_crop_shape[0], :canvas_crop_shape[1], :]
@@ -217,9 +218,9 @@ def StitchPatches(hdf5_file_path, downscale=16, draw_grid=False, bg_color=(0,0,0
     dset = file['imgs']
     coords = file['coords'][:]
     if 'downsampled_level_dim' in dset.attrs.keys():
-        w, h = dset.attrs['downsampled_level_dim']
+        h, w = dset.attrs['downsampled_level_dim']
     else:
-        w, h = dset.attrs['level_dim']
+        h, w = dset.attrs['level_dim']
     print('original size: {} x {}'.format(w, h))
     w = w // downscale
     h = h //downscale
@@ -246,16 +247,16 @@ def StitchPatches(hdf5_file_path, downscale=16, draw_grid=False, bg_color=(0,0,0
 
 def StitchCoords(hdf5_file_path, wsi_object, downscale=16, draw_grid=False, bg_color=(0,0,0), alpha=-1):
     wsi = wsi_object.getOpenSlide()
-    vis_level = wsi.get_best_level_for_downsample(downscale)
+    vis_level = -1
     file = h5py.File(hdf5_file_path, 'r')
     dset = file['coords']
     coords = dset[:]
-    w, h = wsi.level_dimensions[0]
+    h, w = wsi_object.level_dim[0]
 
     print('start stitching {}'.format(dset.attrs['name']))
     print('original size: {} x {}'.format(w, h))
 
-    w, h = wsi.level_dimensions[vis_level]
+    h, w = wsi_object.level_dim[-1]
 
     print('downscaled size for stiching: {} x {}'.format(w, h))
     print('number of patches: {}'.format(len(coords)))
@@ -263,7 +264,7 @@ def StitchCoords(hdf5_file_path, wsi_object, downscale=16, draw_grid=False, bg_c
     patch_size = dset.attrs['patch_size']
     patch_level = dset.attrs['patch_level']
     print('patch size: {}x{} patch level: {}'.format(patch_size, patch_size, patch_level))
-    patch_size = tuple((np.array((patch_size, patch_size)) * wsi.level_downsamples[patch_level]).astype(np.int32))
+    patch_size = tuple((np.array((patch_size, patch_size)) * wsi_object.level_downsamples[patch_level]).astype(np.int32))
     print('ref patch size: {}x{}'.format(patch_size, patch_size))
 
     if w*h > Image.MAX_IMAGE_PIXELS: 
@@ -314,7 +315,7 @@ def SamplePatches(coords_file_path, save_file_path, wsi_object,
     
     for idx in indices:
         coord = coords[idx]
-        patch = wsi_object.wsi.read_region(coord, patch_level, tuple([patch_size, patch_size])).convert('RGB')
+        patch = wsi_object.wsi.read_region(coord, patch_level, tuple([patch_size, patch_size])).convert('RGB') # fix this
         if custom_downsample > 1:
             patch = patch.resize(tuple(target_patch_size))
 
