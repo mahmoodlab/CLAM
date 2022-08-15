@@ -17,12 +17,15 @@ def stitching(file_path, wsi_object, downscale = 64):
 	
 	return heatmap, total_time
 
-def segment(WSI_object, seg_params, filter_params):
+def segment(WSI_object, seg_params = None, filter_params = None, mask_file = None):
 	### Start Seg Timer
 	start_time = time.time()
-
-	# Segment
-	WSI_object.segmentTissue(**seg_params, filter_params=filter_params)
+	# Use segmentation file
+	if mask_file is not None:
+		WSI_object.initSegmentation(mask_file)
+	# Segment	
+	else:
+		WSI_object.segmentTissue(**seg_params, filter_params=filter_params)
 
 	### Stop Seg Timers
 	seg_time_elapsed = time.time() - start_time   
