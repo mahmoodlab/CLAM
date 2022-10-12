@@ -80,7 +80,7 @@ def compute_from_patches(wsi_object, clam_pred=None, model=None, feature_extract
                 save_path = save_hdf5(attn_save_path, asset_dict, mode=mode)
     
         if idx % math.ceil(num_batches * 0.05) == 0:
-            print('procssed {} / {}'.format(idx, num_batches))
+            print('processed {} / {}'.format(idx, num_batches))
 
         if feat_save_path is not None:
             asset_dict = {'features': features.cpu().numpy(), 'coords': coords}
