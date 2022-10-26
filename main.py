@@ -89,7 +89,7 @@ parser.add_argument('--log_data', action='store_true', default=False, help='log 
 parser.add_argument('--testing', action='store_true', default=False, help='debugging tool')
 parser.add_argument('--early_stopping', action='store_true', default=False, help='enable early stopping')
 parser.add_argument('--opt', type=str, choices = ['adam', 'sgd'], default='adam')
-parser.add_argument('--drop_out', action='store_true', default=False, help='enabel dropout (p=0.25)')
+parser.add_argument('--drop_out', action='store_true', default=False, help='enable dropout (p=0.25)')
 parser.add_argument('--bag_loss', type=str, choices=['svm', 'ce'], default='ce',
                      help='slide-level classification loss function (default: ce)')
 parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
