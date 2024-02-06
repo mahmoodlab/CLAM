@@ -297,7 +297,8 @@ This work was funded by NIH NIGMS [R35GM138216](https://reporter.nih.gov/search/
 ## Reference
 If you find our work useful in your research or if you use parts of this code please consider citing our [paper](https://www.nature.com/articles/s41551-020-00682-w):
 
-Lu, M. Y., Chen, B., Williamson, D. F., Chen, R. J., Liang, I., Ding, T., ... & Mahmood, F. (2024). A visual-language foundation model for computational pathology. Nature Medicine.
+Lu, M.Y., Williamson, D.F.K., Chen, T.Y. et al. Data-efficient and weakly supervised computational pathology on whole-slide images. Nat Biomed Eng 5, 555–570 (2021). https://doi.org/10.1038/s41551-020-00682-w
+
 ```
 @article{lu2021data,
   title={Data-efficient and weakly supervised computational pathology on whole-slide images},
