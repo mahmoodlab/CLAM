@@ -28,6 +28,8 @@ Note that the README has been updated to use the new, faster pipeline by default
 
 Please refer to our [Installation guide](INSTALLATION.md) for detailed instructions on how to get started.
 
+Note if you encounter errors with installation, please see https://github.com/mahmoodlab/CLAM/issues/190 which may help resolve your issues. 
+
 ## WSI Segmentation and Patching 
 
 <img src="CLAM1.jpg" width="1000px" align="center" />
