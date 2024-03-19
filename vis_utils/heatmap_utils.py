@@ -20,7 +20,7 @@ from scipy.stats import percentileofscore
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def score2percentile(score, ref):
-    percentile = percentileofscore(ref, score)
+    percentile = percentileofscore(ref.squeeze(), score.squeeze())
     return percentile
 
 def drawHeatmap(scores, coords, slide_path=None, wsi_object=None, vis_level = -1, **kwargs):
