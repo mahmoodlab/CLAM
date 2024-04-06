@@ -21,7 +21,7 @@ from models import get_encoder
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-def compute_w_loader(output_path, model, verbose = 0):
+def compute_w_loader(output_path, loader, model, verbose = 0):
 	"""
 	args:
 		output_path: directory to save computed features (.h5 file)
@@ -74,7 +74,6 @@ if __name__ == '__main__':
 	os.makedirs(os.path.join(args.feat_dir, 'h5_files'), exist_ok=True)
 	dest_files = os.listdir(os.path.join(args.feat_dir, 'pt_files'))
 
-	print('loading model checkpoint')
 	model, img_transforms = get_encoder(args.model_name, target_img_size=args.target_patch_size)
 			
 	_ = model.eval()
@@ -103,7 +102,7 @@ if __name__ == '__main__':
 									 img_transforms=img_transforms)
 
 		loader = DataLoader(dataset=dataset, batch_size=args.batch_size, **loader_kwargs)
-		output_file_path = compute_w_loader(output_path, model = model, verbose = 1)
+		output_file_path = compute_w_loader(output_path, loader = loader, model = model, verbose = 1)
 
 		time_elapsed = time.time() - time_start
 		print('\ncomputing features for {} took {} s'.format(output_file_path, time_elapsed))

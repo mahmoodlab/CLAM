@@ -15,28 +15,17 @@ import numpy as np
 
 from utils.file_utils import save_hdf5
 from dataset_modules.dataset_h5 import Dataset_All_Bags, Whole_Slide_Bag, get_eval_transforms
-from utils.constants import MODEL2CONSTANTS
 from models import get_encoder
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-def compute_w_loader(file_path, output_path, model, batch_size = 8, verbose = 0, 
-	  				 print_every=20, pretrained=True, target_patch_size=-1):
+def compute_w_loader(output_path, loader, model, verbose = 0):
 	"""
 	args:
-		file_path: directory of bag (.h5 file)
 		output_path: directory to save computed features (.h5 file)
 		model: pytorch model
-		batch_size: batch_size for computing features in batches
 		verbose: level of feedback
-		pretrained: use weights pretrained on imagenet
 	"""
-	dataset = Whole_Slide_Bag(file_path=file_path, pretrained=pretrained, 
-							  target_patch_size=target_patch_size)
-
-	kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
-	loader = DataLoader(dataset=dataset, batch_size=batch_size, **kwargs, collate_fn=collate_features)
-
 	if verbose > 0:
 		print('processing {}: total of {} batches'.format(file_path,len(loader)))
 
@@ -79,7 +68,6 @@ if __name__ == '__main__':
 	os.makedirs(args.feat_dir, exist_ok=True)
 	dest_files = os.listdir(args.feat_dir)
 
-	print('loading model checkpoint')
 	model, img_transforms = get_encoder(args.model_name, target_img_size=args.target_patch_size)		
 	model = model.to(device)
 	_ = model.eval()
@@ -104,7 +92,7 @@ if __name__ == '__main__':
 
 		dataset = Whole_Slide_Bag(file_path=file_path, img_transforms=img_transforms)
 		loader = DataLoader(dataset=dataset, batch_size=args.batch_size, **loader_kwargs)
-		output_file_path = compute_w_loader(output_path, model = model, verbose = 1)
+		output_file_path = compute_w_loader(output_path, loader = loader, model = model, verbose = 1)
 
 		time_elapsed = time.time() - time_start
 		print('\ncomputing features for {} took {} s'.format(output_file_path, time_elapsed))
