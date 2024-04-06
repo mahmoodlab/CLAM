@@ -9,12 +9,6 @@ from torch.utils.data import Dataset
 import torch
 from wsi_core.util_classes import Contour_Checking_fn, isInContourV1, isInContourV2, isInContourV3_Easy, isInContourV3_Hard
 
-def default_transforms(mean = (0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)):
-    t = transforms.Compose(
-                        [transforms.ToTensor(),
-                         transforms.Normalize(mean = mean, std = std)])
-    return t
-
 def get_contour_check_fn(contour_fn='four_pt_hard', cont=None, ref_patch_size=None, center_shift=None):
     if contour_fn == 'four_pt_hard':
         cont_check_fn = isInContourV3_Hard(contour=cont, patch_size=ref_patch_size, center_shift=center_shift)
@@ -104,10 +98,8 @@ class Wsi_Region(Dataset):
         print('filtered a total of {} coordinates'.format(len(self.coords)))
         
         # apply transformation
-        if t is None:
-            self.transforms = default_transforms()
-        else:
-            self.transforms = t
+        assert t is not None, 'transformations not provided'
+        self.transforms = t
 
     def __len__(self):
         return len(self.coords)

@@ -1,34 +1,22 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.utils import initialize_weights
-import numpy as np
 
 class MIL_fc(nn.Module):
-    def __init__(self, gate = True, size_arg = "small", dropout = False, n_classes = 2, top_k=1):
-        super(MIL_fc, self).__init__()
+    def __init__(self, size_arg = "small", dropout = 0., n_classes = 2, top_k=1,
+                 embed_dim=1024):
+        super().__init__()
         assert n_classes == 2
-        self.size_dict = {"small": [1024, 512]}
+        self.size_dict = {"small": [embed_dim, 512]}
         size = self.size_dict[size_arg]
-        fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
-        if dropout:
-            fc.append(nn.Dropout(0.25))
-
-        fc.append(nn.Linear(size[1], n_classes))
-        self.classifier= nn.Sequential(*fc)
-        initialize_weights(self)
+        fc = [nn.Linear(size[0], size[1]), nn.ReLU(), nn.Dropout(dropout)]
+        self.fc = nn.Sequential(*fc)
+        self.classifier=  nn.Linear(size[1], n_classes)
         self.top_k=top_k
 
-    def relocate(self):
-        device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.classifier.to(device)
-
     def forward(self, h, return_features=False):
-        if return_features:
-            h = self.classifier.module[:3](h)
-            logits = self.classifier.module[3](h)
-        else:
-            logits  = self.classifier(h) # K x 1
+        h = self.fc(h)
+        logits  = self.classifier(h) # K x 2
         
         y_probs = F.softmax(logits, dim = 1)
         top_instance_idx = torch.topk(y_probs[:, 1], self.top_k, dim=0)[1].view(1,)
@@ -44,38 +32,21 @@ class MIL_fc(nn.Module):
 
 
 class MIL_fc_mc(nn.Module):
-    def __init__(self, gate = True, size_arg = "small", dropout = False, n_classes = 2, top_k=1):
-        super(MIL_fc_mc, self).__init__()
+    def __init__(self, size_arg = "small", dropout = 0., n_classes = 2, top_k=1, embed_dim=1024):
+        super().__init__()
         assert n_classes > 2
-        self.size_dict = {"small": [1024, 512]}
+        self.size_dict = {"small": [embed_dim, 512]}
         size = self.size_dict[size_arg]
-        fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
-        if dropout:
-            fc.append(nn.Dropout(0.25))
+        fc = [nn.Linear(size[0], size[1]), nn.ReLU(), nn.Dropout(dropout)]
         self.fc = nn.Sequential(*fc)
-
-        self.classifiers = nn.ModuleList([nn.Linear(size[1], 1) for i in range(n_classes)])
-        initialize_weights(self)
+        self.classifiers = nn.Linear(size[1], n_classes)
         self.top_k=top_k
         self.n_classes = n_classes
         assert self.top_k == 1
-
-    def relocate(self):
-        device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.fc = self.fc.to(device)
-        self.classifiers = self.classifiers.to(device)
     
-    def forward(self, h, return_features=False):
-        device = h.device
-       
+    def forward(self, h, return_features=False):       
         h = self.fc(h)
-        logits = torch.empty(h.size(0), self.n_classes).float().to(device)
-
-        for c in range(self.n_classes):
-            if isinstance(self.classifiers, nn.DataParallel):
-                logits[:, c] = self.classifiers.module[c](h).squeeze(1)
-            else:
-                logits[:, c] = self.classifiers[c](h).squeeze(1)        
+        logits = self.classifiers(h)
 
         y_probs = F.softmax(logits, dim = 1)
         m = y_probs.view(1, -1).argmax(1)
