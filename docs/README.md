@@ -23,6 +23,8 @@ Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Imag
 
 Note that the README has been updated to use the new, faster pipeline by default. If you still wish to use the old pipeline, refer to: [Guide for Old Pipeline](README_old.md). It saves tissue patches, which is signficantly slower and takes up a lot of storage space but can still be useful if you need to work with original image patches instead of feature embeddings.
 
+**Note**: while the we hope that the newest update will require minimal changes to the user's workflow, if needed, you may reference the old version of the code base [here](https://github.com/mahmoodlab/CLAM/tree/deprecated). Please report any issues in the public forum.
+
 ## Installation:
 Please refer to our [Installation guide](INSTALLATION.md) for detailed instructions on how to get started.
 
