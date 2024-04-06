@@ -1,39 +1,24 @@
 CLAM Installation Guide <img src="clam-logo.png" width="350px" align="right" />
 ===========
-For instructions on installing anaconda on your machine (download the distribution that comes with python 3):
-https://www.anaconda.com/distribution/
-
-After setting up anaconda, first install openslide:
+Next, use the environment configuration file to create a conda environment:
 ```shell
-sudo apt-get install openslide-tools
-```
-
-Next, use the environment configuration file located in **docs/clam.yaml** to create a conda environment:
-```shell
-conda env create -n clam -f docs/clam.yaml
+conda env create -f env.yml
 ```
 
 Activate the environment:
 ```shell
-conda activate clam
+conda activate clam_latest
 ```
 
-Once inside the created environment, to install smooth-topk (first cd to a location that is outside the project folder and is suitable for cloning new git repositories):
-
+If you want to use CONCH as the pretrained encoder, install the package in the environment by running the following command:
 ```shell
-git clone https://github.com/oval-group/smooth-topk.git
-cd smooth-topk
-python setup.py install
+pip install git+https://github.com/Mahmoodlab/CONCH.git
 ```
 
 When done running experiments, to deactivate the environment:
 ```shell
-conda deactivate clam
+conda deactivate clam_latest
 ```
 Please report any issues in the public forum.
-
-## Using .svs files:
-Note that CLAM uses openslide, which relies on the pixman library, and pixman version 0.38 has a known glitch that causes certain downsamples of some .svs files to be read incorrectly. See [here](https://github.com/mahmoodlab/CLAM/issues/13) for examples, discussion and possible workarounds (the exact solution might differ depending on how your conda environment is setup).  
-
 
 [Return to main page.](README.md)

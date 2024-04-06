@@ -32,8 +32,6 @@ parser.add_argument('--model_size', type=str, choices=['small', 'big'], default=
                     help='size of model (default: small)')
 parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
                     help='type of model (default: clam_sb)')
-parser.add_argument('--drop_out', action='store_true', default=False, 
-                    help='whether model uses dropout')
 parser.add_argument('--k', type=int, default=10, help='number of folds (default: 10)')
 parser.add_argument('--k_start', type=int, default=-1, help='start fold (default: -1, last fold)')
 parser.add_argument('--k_end', type=int, default=-1, help='end fold (default: -1, first fold)')

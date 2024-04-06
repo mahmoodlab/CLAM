@@ -9,6 +9,7 @@ import time
 import argparse
 import pdb
 import pandas as pd
+from tqdm import tqdm
 
 def stitching(file_path, wsi_object, downscale = 64):
 	start = time.time()
@@ -86,7 +87,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 	patch_times = 0.
 	stitch_times = 0.
 
-	for i in range(total):
+	for i in tqdm(range(total)):
 		df.to_csv(os.path.join(save_dir, 'process_list_autogen.csv'), index=False)
 		idx = process_stack.index[i]
 		slide = process_stack.loc[idx, 'slide_id']

@@ -16,20 +16,15 @@ Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Imag
 © [Mahmood Lab](http://www.mahmoodlab.org) - This code is made available under the GPLv3 License and is available for non-commercial academic purposes. 
 
 ## Updates:
-* **03/19/2024**: We are releasing [UNI](https://github.com/mahmoodlab/UNI) and [CONCH](https://github.com/mahmoodlab/CONCH), a pair of SOTA pretrained encoders that produce strong representations for histopathology images and enhance performance on various computational pathology workflows, including the MIL-based CLAM workflow. Stay tuned for more updates on how to use these encoders with CLAM in the next few days.
+* **04/06/2024**: UNI and CONCH are now available to select as pretrained encoders. See [Using CONCH / UNI as Pretrained Encoders](#using-conch--uni-as-pretrained-encoders) for more details. Please make sure all dependencies are installed correctly by installing the latest **env.yml** file (see [Installation guide](INSTALLATION.md) for details), and using the corresponding **clam_latest** conda environment.
+* 03/19/2024: We are releasing [UNI](https://github.com/mahmoodlab/UNI) and [CONCH](https://github.com/mahmoodlab/CONCH), a pair of SOTA pretrained encoders that produce strong representations for histopathology images and enhance performance on various computational pathology workflows, including the MIL-based CLAM workflow. 
 * 05/24/2021: Script for heatmap visualization now available via **create_heatmaps.py**, with the configuration template located in **heatmaps/configs**. See [Heatmap visualization for demo and instructions.](#Heatmap-Visualization)
 * 03/01/2021: New, fast patching/feature extraction pipeline is now available. **TL;DR:** since CLAM only requires image features for training, it is not necessary to save the actual image patches, the new pipeline rids of this overhead and instead only saves the coordinates of image patches during "patching" and loads these regions on the fly from WSIs during feature extraction. This is significantly faster than the old pipeline and usually only takes 1-2s for "patching" and a couple minutes to featurize a WSI. To use the new pipeline, make sure you are calling **create_patches_fp.py** and **extract_features_fp.py** instead of the old **create_patches.py** and **extract_features.py** scripts.
 
 Note that the README has been updated to use the new, faster pipeline by default. If you still wish to use the old pipeline, refer to: [Guide for Old Pipeline](README_old.md). It saves tissue patches, which is signficantly slower and takes up a lot of storage space but can still be useful if you need to work with original image patches instead of feature embeddings.
 
-## Pre-requisites:
-* Linux (Tested on Ubuntu 18.04)
-* NVIDIA GPU (Tested on Nvidia GeForce RTX 2080 Ti x 12 on local workstations, and Nvidia P100, K80 GPUs on Google Cloud)
-* Python (3.7.5), h5py (2.10.0), matplotlib (3.1.1), numpy (1.17.3), opencv-python (4.1.1.26), openslide-python (1.1.1), openslide (3.4.1), pandas (0.25.3), pillow (6.2.1), PyTorch (1.3.1), scikit-learn (0.22.1), scipy (1.3.1), tensorflow (1.14.0), tensorboardx (1.9), torchvision (0.4.2), smooth-topk.
-
+## Installation:
 Please refer to our [Installation guide](INSTALLATION.md) for detailed instructions on how to get started.
-
-Note if you encounter errors with installation, please see https://github.com/mahmoodlab/CLAM/issues/190 which may help resolve your issues. 
 
 ## WSI Segmentation and Patching 
 
@@ -136,10 +131,13 @@ python create_patches_fp.py --source DATA_DIRECTORY --save_dir RESULTS_DIRECTORY
 
 ### Feature Extraction (GPU Example)
 ```bash
-CUDA_VISIBLE_DEVICES=0,1 python extract_features_fp.py --data_h5_dir DIR_TO_COORDS --data_slide_dir DATA_DIRECTORY --csv_path CSV_FILE_NAME --feat_dir FEATURES_DIRECTORY --batch_size 512 --slide_ext .svs
+CUDA_VISIBLE_DEVICES=0 python extract_features_fp.py --data_h5_dir DIR_TO_COORDS --data_slide_dir DATA_DIRECTORY --csv_path CSV_FILE_NAME --feat_dir FEATURES_DIRECTORY --batch_size 512 --slide_ext .svs
 ```
 
-The above command expects the coordinates .h5 files to be stored under DIR_TO_COORDS and will use 2 GPUs (0 and 1) and a batch size of 512 to extract 1024-dim features from each tissue patch for each slide and produce the following folder structure:
+export CONCH_CKPT_PATH=
+CUDA_VISIBLE_DEVICES=0 python extract_features_fp.py --data_h5_dir /ssd/Project_SSL/CLAM_dev/ --data_slide_dir /ssd/Project_SSL/TCGA_NSCLC_WSIs/ --csv_path /ssd/Project_SSL/CLAM_dev/process_list_autogen.csv --feat_dir /ssd/Project_SSL/CLAM_dev/resnet50 --batch_size 128 --slide_ext .svs --model_name conch_v1
+
+The above command expects the coordinates .h5 files to be stored under DIR_TO_COORDS and a batch size of 512 to extract 1024-dim features from each tissue patch for each slide and produce the following folder structure:
 ```bash
 FEATURES_DIRECTORY/
     ├── h5_files
@@ -152,6 +150,22 @@ FEATURES_DIRECTORY/
             └── ...
 ```
 where each .h5 file contains an array of extracted features along with their patch coordinates (note for faster training, a .pt file for each slide is also created for each slide, containing just the patch features). The csv file is expected to contain a list of slide filenames (without the filename extensions) to process (the easiest option is to take the csv file auto generated by the previous segmentation/patching step, and delete the filename extensions)
+
+### Using CONCH / UNI as Pretrained Encoders
+If using UNI or CONCH, first refer to their respective HF page below to request and download the model weights (pytorch_model.bin). 
+
+UNI: https://huggingface.co/MahmoodLab/UNI
+
+CONCH: https://huggingface.co/MahmoodLab/CONCH
+
+After successfully downloading the model checkpoints, you need to set the `CONCH_CKPT_PATH` and `UNI_CKPT_PATH` environment variable to the path of the pretrained encoder checkpoints, before running the feature extraction script. For example, if you have downloaded the pretrained UNI and CONCH checkpoints and placed them in the **checkpoints/conch** and **checkpoints/uni** folders respectively, you can set the environment variables as follows:
+```bash
+export CONCH_CKPT_PATH=checkpoints/conch/pytorch_model.bin
+export UNI_CKPT_PATH=checkpoints/uni/pytorch_model.bin
+```
+When running the **extract_features_fp.py** also set `--model_name` to either 'uni_v1' or 'conch_v1' to use the respective encoder.
+
+Note that these encoder models (especially UNI, which uses ViT-L) are more computationally expensive and require more GPU memory than the default ResNet50 encoder, so expect longer runtimes and reduced batch sizes accordingly if you run out of GPU memory. UNI will produce 1024-dim features, while CONCH will produce 512-dim features.
 
 ### Datasets
 The data used for training and testing are expected to be organized as follows:
@@ -218,22 +232,24 @@ parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'tas
 ```
 
 ### Training Splits
-For evaluating the algorithm's performance, multiple folds (e.g. 10-fold) of train/val/test splits can be used. Example 10-fold 80/10/10 splits for the two dummy datasets, using 50% of training data can be found under the **splits** folder. These splits can be automatically generated using the create_splits_seq.py script with minimal modification just like with **main.py**. For example, tumor_vs_normal splits with 75% of training data can be created by calling:
+For evaluating the algorithm's performance, multiple folds (e.g. 10-fold) of train/val/test splits can be used. Example 10-fold 80/10/10 splits for the two dummy datasets can be found under the **splits** folder. These splits can be automatically generated using the create_splits_seq.py script with minimal modification just like with **main.py**. For example, tumor_vs_normal splits can be created by calling:
  
 ``` shell
-python create_splits_seq.py --task task_1_tumor_vs_normal --seed 1 --label_frac 0.75 --k 10
+python create_splits_seq.py --task task_1_tumor_vs_normal --seed 1 --k 10
 ```
 The script uses the **Generic_WSI_Classification_Dataset** Class for which the constructor expects the same arguments as 
 **Generic_MIL_Dataset** (without the data_dir argument). For details, please refer to the dataset definition in **datasets/dataset_generic.py**
 
 ### GPU Training Example for Binary Positive vs. Negative Classification (e.g. Lymph Node Status)
+Note: --embed_dim should be set to 512 for CONCH, and 1024 for UNI and resnet50_trunc.
+
 ``` shell
-CUDA_VISIBLE_DEVICES=0 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code task_1_tumor_vs_normal_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task task_1_tumor_vs_normal --model_type clam_sb --log_data --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --exp_code task_1_tumor_vs_normal_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task task_1_tumor_vs_normal --model_type clam_sb --log_data --data_root_dir DATA_ROOT_DIR --embed_dim 1024
 ```
 
 ### GPU Training Example for Subtyping Problems (e.g. 3-class RCC Subtyping)
 ``` shell
-CUDA_VISIBLE_DEVICES=0 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --label_frac 0.5 --exp_code task_2_tumor_subtyping_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task task_2_tumor_subtyping --model_type clam_sb --log_data --subtyping --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0 python main.py --drop_out --early_stopping --lr 2e-4 --k 10 --exp_code task_2_tumor_subtyping_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task task_2_tumor_subtyping --model_type clam_sb --log_data --subtyping --data_root_dir DATA_ROOT_DIR --embed_dim 1024
 ``` 
 Note: We have included the option to use a single-attention-branch CLAM model, which performs favoribly in most experiments and can be set via --model_type clam_sb (single branch) or clam_mb (multi branch). clam_sb is the default choice. Additionally, the user can adjust the number of patches used for clustering via --B.
 
@@ -250,11 +266,11 @@ python main.py -h
 ### Testing and Evaluation Script
 User also has the option of using the evluation script to test the performances of trained models. Examples corresponding to the models trained above are provided below:
 ``` shell
-CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --models_exp_code task_1_tumor_vs_normal_CLAM_50_s1 --save_exp_code task_1_tumor_vs_normal_CLAM_50_s1_cv --task task_1_tumor_vs_normal --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --models_exp_code task_1_tumor_vs_normal_CLAM_50_s1 --save_exp_code task_1_tumor_vs_normal_CLAM_50_s1_cv --task task_1_tumor_vs_normal --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR --embed_dim 1024
 ```
 
 ``` shell
-CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --models_exp_code task_2_tumor_subtyping_CLAM_50_s1 --save_exp_code task_2_tumor_subtyping_CLAM_50_s1_cv --task task_2_tumor_subtyping --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR
+CUDA_VISIBLE_DEVICES=0 python eval.py --drop_out --k 10 --models_exp_code task_2_tumor_subtyping_CLAM_50_s1 --save_exp_code task_2_tumor_subtyping_CLAM_50_s1_cv --task task_2_tumor_subtyping --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR --embed_dim 1024
 ```
 
 
@@ -269,9 +285,11 @@ By adding your own custom datasets into **eval.py** the same way as you do for *
 Heatmap visualization can be computed in bulk via **create_heatmaps.py** by filling out the config file and storing it in **/heatmaps/configs** and then running **create_heatmaps.py** with the --config NAME_OF_CONFIG_FILE flag. A demo template is included (**config_template.yaml**) for lung subtyping on two WSIs from the CPTAC. 
 To run the demo (raw results are saved in **heatmaps/heatmap_raw_results** and final results are saved in **heatmaps/heatmap_production_results**):
 ``` shell
-CUDA_VISIBLE_DEVICES=0,1 python create_heatmaps.py --config config_template.yaml
+CUDA_VISIBLE_DEVICES=0 python create_heatmaps.py --config config_template.yaml
 ```
 See **/heatmaps/configs/config_template.yaml** for explanations for each configurable option.
+
+Similar to feature extraction, if using UNI / CONCH, set the environment variables before running the script. See [Using CONCH / UNI as Pretrained Encoders](#using-conch--uni-as-pretrained-encoders) for more details.
 
 
 ### Trained Model Checkpoints
