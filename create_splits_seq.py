@@ -1,7 +1,7 @@
 import pdb
 import os
 import pandas as pd
-from datasets.dataset_generic import Generic_WSI_Classification_Dataset, Generic_MIL_Dataset, save_splits
+from dataset_modules.dataset_generic import Generic_WSI_Classification_Dataset, Generic_MIL_Dataset, save_splits
 import argparse
 import numpy as np
 
