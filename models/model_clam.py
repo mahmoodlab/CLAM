@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import pdb
 
 """
 Attention Network without Gating (2 fc layers)
@@ -192,7 +193,8 @@ class CLAM_MB(CLAM_SB):
             attention_net = Attn_Net(L = size[1], D = size[2], dropout = dropout, n_classes = n_classes)
         fc.append(attention_net)
         self.attention_net = nn.Sequential(*fc)
-        self.classifiers = nn.Linear(size[1], n_classes)  #use an indepdent linear layer to predict each class
+        bag_classifiers = [nn.Linear(size[1], 1) for i in range(n_classes)] #use an indepdent linear layer to predict each class
+        self.classifiers = nn.ModuleList(bag_classifiers)
         instance_classifiers = [nn.Linear(size[1], 2) for i in range(n_classes)]
         self.instance_classifiers = nn.ModuleList(instance_classifiers)
         self.k_sample = k_sample
@@ -233,7 +235,11 @@ class CLAM_MB(CLAM_SB):
                 total_inst_loss /= len(self.instance_classifiers)
 
         M = torch.mm(A, h) 
-        logits = self.classifiers(M)
+
+        logits = torch.empty(1, self.n_classes).float().to(M.device)
+        for c in range(self.n_classes):
+            logits[0, c] = self.classifiers[c](M[c])
+
         Y_hat = torch.topk(logits, 1, dim = 1)[1]
         Y_prob = F.softmax(logits, dim = 1)
         if instance_eval:
