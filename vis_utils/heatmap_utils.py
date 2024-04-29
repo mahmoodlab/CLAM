@@ -10,7 +10,7 @@ from PIL import Image
 from math import floor
 import matplotlib.pyplot as plt
 from dataset_modules.wsi_dataset import Wsi_Region
-from dataset_modules.dataset_h5 import get_eval_transforms
+from utils.transform_utils import get_eval_transforms
 import h5py
 from wsi_core.WholeSlideImage import WholeSlideImage
 from scipy.stats import percentileofscore
