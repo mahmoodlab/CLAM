@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import multiprocessing as mp
 import cv2
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 import openslide
 from PIL import Image
@@ -620,8 +620,8 @@ class WholeSlideImage(object):
         print('total of {} patches'.format(len(coords)))
         twenty_percent_chunk = max(1, int(len(coords) * 0.2))
 
-        if isinstance(cmap, str):
-            cmap = plt.get_cmap(cmap)
+        # if isinstance(cmap, str):
+        #     cmap = plt.get_cmap(cmap)
         
         for idx in range(len(coords)):
             if (idx + 1) % twenty_percent_chunk == 0:

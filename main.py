@@ -98,7 +98,7 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping'])
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping','biomarker_ER'])
 ### CLAM specific options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
                      help='disable instance-level clustering')
@@ -111,6 +111,7 @@ parser.add_argument('--bag_weight', type=float, default=0.7,
 parser.add_argument('--B', type=int, default=8, help='numbr of positive/negative patches to sample for clam')
 args = parser.parse_args()
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def seed_torch(seed=7):
     import random
@@ -173,9 +174,23 @@ elif args.task == 'task_2_tumor_subtyping':
                             label_dict = {'subtype_1':0, 'subtype_2':1, 'subtype_3':2},
                             patient_strat= False,
                             ignore=[])
-
     if args.model_type in ['clam_sb', 'clam_mb']:
-        assert args.subtyping 
+        assert args.subtyping
+
+elif args.task == 'biomarker_ER':
+    args.n_classes = 2
+    dataset = Generic_MIL_Dataset(
+                            csv_path='/mnt/EncryptedDisk2/BreastData/Studies/CLAM/csv_for_training.csv',
+                            data_dir='/mnt/EncryptedDisk2/BreastData/Studies/CLAM/features',
+                            shuffle=False,
+                            seed=args.seed,
+                            print_info=True,
+                            label_col='ER',
+                            label_dict={'>= 1%': 0, '< 1%': 1},
+                            patient_strat=False,
+                            ignore=['Ki67', 'HER2', 'PR', 'Filepath'])
+
+
         
 else:
     raise NotImplementedError

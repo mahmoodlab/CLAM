@@ -1,3 +1,15 @@
 **/.DS_Store
 __pycache__/
 notebooks
+/checkpoints/uni/
+*.h5
+*.tif
+*.tiff
+*.vsi
+*.ndpi
+*.png
+*.jpg
+*.whl
+*.xlsx
+*.geojson
+*.csv

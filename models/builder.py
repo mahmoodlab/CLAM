@@ -6,6 +6,8 @@ import torch
 from utils.constants import MODEL2CONSTANTS
 from utils.transform_utils import get_eval_transforms
 
+os.environ['UNI_CKPT_PATH'] = 'checkpoints/uni/pytorch_model.bin'
+
 def has_CONCH():
     HAS_CONCH = False
     CONCH_CKPT_PATH = ''
