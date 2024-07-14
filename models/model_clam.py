@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.utils import initialize_weights
 import numpy as np
+import pdb
 
 """
 Attention Network without Gating (2 fc layers)
@@ -75,14 +75,12 @@ args:
     subtyping: whether it's a subtyping problem
 """
 class CLAM_SB(nn.Module):
-    def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
-        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
-        super(CLAM_SB, self).__init__()
-        self.size_dict = {"small": [1024, 512, 256], "big": [1024, 512, 384]}
+    def __init__(self, gate = True, size_arg = "small", dropout = 0., k_sample=8, n_classes=2,
+        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_dim=1024):
+        super().__init__()
+        self.size_dict = {"small": [embed_dim, 512, 256], "big": [embed_dim, 512, 384]}
         size = self.size_dict[size_arg]
-        fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
-        if dropout:
-            fc.append(nn.Dropout(0.25))
+        fc = [nn.Linear(size[0], size[1]), nn.ReLU(), nn.Dropout(dropout)]
         if gate:
             attention_net = Attn_Net_Gated(L = size[1], D = size[2], dropout = dropout, n_classes = 1)
         else:
@@ -96,18 +94,11 @@ class CLAM_SB(nn.Module):
         self.instance_loss_fn = instance_loss_fn
         self.n_classes = n_classes
         self.subtyping = subtyping
-
-        initialize_weights(self)
-
-    def relocate(self):
-        device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.attention_net = self.attention_net.to(device)
-        self.classifiers = self.classifiers.to(device)
-        self.instance_classifiers = self.instance_classifiers.to(device)
     
     @staticmethod
     def create_positive_targets(length, device):
         return torch.full((length, ), 1, device=device).long()
+    
     @staticmethod
     def create_negative_targets(length, device):
         return torch.full((length, ), 0, device=device).long()
@@ -145,7 +136,6 @@ class CLAM_SB(nn.Module):
         return instance_loss, p_preds, p_targets
 
     def forward(self, h, label=None, instance_eval=False, return_features=False, attention_only=False):
-        device = h.device
         A, h = self.attention_net(h)  # NxK        
         A = torch.transpose(A, 1, 0)  # KxN
         if attention_only:
@@ -191,14 +181,12 @@ class CLAM_SB(nn.Module):
         return logits, Y_prob, Y_hat, A_raw, results_dict
 
 class CLAM_MB(CLAM_SB):
-    def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
-        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
+    def __init__(self, gate = True, size_arg = "small", dropout = 0., k_sample=8, n_classes=2,
+        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_dim=1024):
         nn.Module.__init__(self)
-        self.size_dict = {"small": [1024, 512, 256], "big": [1024, 512, 384]}
+        self.size_dict = {"small": [embed_dim, 512, 256], "big": [embed_dim, 512, 384]}
         size = self.size_dict[size_arg]
-        fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
-        if dropout:
-            fc.append(nn.Dropout(0.25))
+        fc = [nn.Linear(size[0], size[1]), nn.ReLU(), nn.Dropout(dropout)]
         if gate:
             attention_net = Attn_Net_Gated(L = size[1], D = size[2], dropout = dropout, n_classes = n_classes)
         else:
@@ -213,10 +201,8 @@ class CLAM_MB(CLAM_SB):
         self.instance_loss_fn = instance_loss_fn
         self.n_classes = n_classes
         self.subtyping = subtyping
-        initialize_weights(self)
 
     def forward(self, h, label=None, instance_eval=False, return_features=False, attention_only=False):
-        device = h.device
         A, h = self.attention_net(h)  # NxK        
         A = torch.transpose(A, 1, 0)  # KxN
         if attention_only:
@@ -249,9 +235,11 @@ class CLAM_MB(CLAM_SB):
                 total_inst_loss /= len(self.instance_classifiers)
 
         M = torch.mm(A, h) 
-        logits = torch.empty(1, self.n_classes).float().to(device)
+
+        logits = torch.empty(1, self.n_classes).float().to(M.device)
         for c in range(self.n_classes):
             logits[0, c] = self.classifiers[c](M[c])
+
         Y_hat = torch.topk(logits, 1, dim = 1)[1]
         Y_prob = F.softmax(logits, dim = 1)
         if instance_eval:

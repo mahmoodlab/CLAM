@@ -9,7 +9,7 @@ exp_arguments:
   raw_save_dir: heatmaps/heatmap_raw_results
   # where to save final heatmaps
   production_save_dir: heatmaps/heatmap_production_results
-  batch_size: 384
+  batch_size: 256
 data_arguments: 
   # where is data stored; can be a single str path or a dictionary of key, data_dir mapping
   data_dir: heatmaps/demo/slides/
@@ -31,13 +31,18 @@ patching_arguments:
   overlap: 0.5
   patch_level: 0
   custom_downsample: 1
+encoder_arguments:
+  # arguments for the pretrained encoder model
+  model_name: resnet50_trunc # currently support: resnet50_trunc, uni_v1, conch_v1
+  target_img_size: 224 # resize images to this size before feeding to encoder
 model_arguments: 
   # arguments for initializing model from checkpoint
   ckpt_path: heatmaps/demo/ckpts/s_0_checkpoint.pt
   model_type: clam_sb # see utils/eval_utils/
   initiate_fn: initiate_model # see utils/eval_utils/
   model_size: small
-  drop_out: true
+  drop_out: 0.
+  embed_dim: 1024
 heatmap_arguments:
   # downsample at which to visualize heatmap (-1 refers to downsample closest to 32x downsample)
   vis_level: 1

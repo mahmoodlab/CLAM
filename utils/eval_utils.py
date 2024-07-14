@@ -14,9 +14,9 @@ from sklearn.metrics import roc_auc_score, roc_curve, auc
 from sklearn.preprocessing import label_binarize
 import matplotlib.pyplot as plt
 
-def initiate_model(args, ckpt_path):
+def initiate_model(args, ckpt_path, device='cuda'):
     print('Init Model')    
-    model_dict = {"dropout": args.drop_out, 'n_classes': args.n_classes}
+    model_dict = {"dropout": args.drop_out, 'n_classes': args.n_classes, "embed_dim": args.embed_dim}
     
     if args.model_size is not None and args.model_type in ['clam_sb', 'clam_mb']:
         model_dict.update({"size_arg": args.model_size})
@@ -41,8 +41,8 @@ def initiate_model(args, ckpt_path):
         ckpt_clean.update({key.replace('.module', ''):ckpt[key]})
     model.load_state_dict(ckpt_clean, strict=True)
 
-    model.relocate()
-    model.eval()
+    _ = model.to(device)
+    _ = model.eval()
     return model
 
 def eval(dataset, args, ckpt_path):

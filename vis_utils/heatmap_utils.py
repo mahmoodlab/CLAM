@@ -9,13 +9,16 @@ from utils.utils import *
 from PIL import Image
 from math import floor
 import matplotlib.pyplot as plt
-from datasets.wsi_dataset import Wsi_Region
+from dataset_modules.wsi_dataset import Wsi_Region
+from utils.transform_utils import get_eval_transforms
 import h5py
 from wsi_core.WholeSlideImage import WholeSlideImage
 from scipy.stats import percentileofscore
 import math
 from utils.file_utils import save_hdf5
 from scipy.stats import percentileofscore
+from utils.constants import MODEL2CONSTANTS
+from tqdm import tqdm
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -45,23 +48,23 @@ def initialize_wsi(wsi_path, seg_mask_path=None, seg_params=None, filter_params=
     wsi_object.saveSegmentation(seg_mask_path)
     return wsi_object
 
-def compute_from_patches(wsi_object, clam_pred=None, model=None, feature_extractor=None, batch_size=512,  
+def compute_from_patches(wsi_object, img_transforms, feature_extractor=None, clam_pred=None, model=None, batch_size=512,  
     attn_save_path=None, ref_scores=None, feat_save_path=None, **wsi_kwargs):    
     top_left = wsi_kwargs['top_left']
     bot_right = wsi_kwargs['bot_right']
-    patch_size = wsi_kwargs['patch_size']
+    patch_size = wsi_kwargs['patch_size'] 
     
-    roi_dataset = Wsi_Region(wsi_object, **wsi_kwargs)
+    roi_dataset = Wsi_Region(wsi_object, t=img_transforms, **wsi_kwargs)
     roi_loader = get_simple_loader(roi_dataset, batch_size=batch_size, num_workers=8)
     print('total number of patches to process: ', len(roi_dataset))
     num_batches = len(roi_loader)
-    print('number of batches: ', len(roi_loader))
+    print('number of batches: ', num_batches)
     mode = "w"
-    for idx, (roi, coords) in enumerate(roi_loader):
+    for idx, (roi, coords) in enumerate(tqdm(roi_loader)):
         roi = roi.to(device)
         coords = coords.numpy()
         
-        with torch.no_grad():
+        with torch.inference_mode():
             features = feature_extractor(roi)
 
             if attn_save_path is not None:
@@ -79,9 +82,6 @@ def compute_from_patches(wsi_object, clam_pred=None, model=None, feature_extract
                 asset_dict = {'attention_scores': A, 'coords': coords}
                 save_path = save_hdf5(attn_save_path, asset_dict, mode=mode)
     
-        if idx % math.ceil(num_batches * 0.05) == 0:
-            print('processed {} / {}'.format(idx, num_batches))
-
         if feat_save_path is not None:
             asset_dict = {'features': features.cpu().numpy(), 'coords': coords}
             save_hdf5(feat_save_path, asset_dict, mode=mode)

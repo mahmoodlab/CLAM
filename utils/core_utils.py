@@ -2,17 +2,19 @@ import numpy as np
 import torch
 from utils.utils import *
 import os
-from datasets.dataset_generic import save_splits
+from dataset_modules.dataset_generic import save_splits
 from models.model_mil import MIL_fc, MIL_fc_mc
 from models.model_clam import CLAM_MB, CLAM_SB
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.metrics import auc as calc_auc
 
+device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class Accuracy_Logger(object):
     """Accuracy logger"""
     def __init__(self, n_classes):
-        super(Accuracy_Logger, self).__init__()
+        super().__init__()
         self.n_classes = n_classes
         self.initialize()
 
@@ -122,7 +124,9 @@ def train(datasets, cur, args):
     print('Done!')
     
     print('\nInit Model...', end=' ')
-    model_dict = {"dropout": args.drop_out, 'n_classes': args.n_classes}
+    model_dict = {"dropout": args.drop_out, 
+                  'n_classes': args.n_classes, 
+                  "embed_dim": args.embed_dim}
     
     if args.model_size is not None and args.model_type != 'mil':
         model_dict.update({"size_arg": args.model_size})
@@ -155,7 +159,7 @@ def train(datasets, cur, args):
         else:
             model = MIL_fc(**model_dict)
     
-    model.relocate()
+    _ = model.to(device)
     print('Done!')
     print_network(model)
 
@@ -219,7 +223,6 @@ def train(datasets, cur, args):
 
 
 def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writer = None, loss_fn = None):
-    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.train()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     inst_logger = Accuracy_Logger(n_classes=n_classes)
@@ -287,7 +290,6 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         writer.add_scalar('train/clustering_loss', train_inst_loss, epoch)
 
 def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_fn = None):   
-    device=torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     model.train()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     train_loss = 0.
@@ -333,7 +335,6 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
 
    
 def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer = None, loss_fn = None, results_dir=None):
-    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     # loader.dataset.update_mode(True)
@@ -392,7 +393,6 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
     return False
 
 def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, writer = None, loss_fn = None, results_dir = None):
-    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     inst_logger = Accuracy_Logger(n_classes=n_classes)
@@ -406,7 +406,7 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
     prob = np.zeros((len(loader), n_classes))
     labels = np.zeros(len(loader))
     sample_size = model.k_sample
-    with torch.no_grad():
+    with torch.inference_mode():
         for batch_idx, (data, label) in enumerate(loader):
             data, label = data.to(device), label.to(device)      
             logits, Y_prob, Y_hat, _, instance_dict = model(data, label=label, instance_eval=True)
@@ -483,7 +483,6 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
     return False
 
 def summary(model, loader, n_classes):
-    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     model.eval()
     test_loss = 0.
@@ -498,7 +497,7 @@ def summary(model, loader, n_classes):
     for batch_idx, (data, label) in enumerate(loader):
         data, label = data.to(device), label.to(device)
         slide_id = slide_ids.iloc[batch_idx]
-        with torch.no_grad():
+        with torch.inference_mode():
             logits, Y_prob, Y_hat, _, _ = model(data)
 
         acc_logger.log(Y_hat, label)
