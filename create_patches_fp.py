@@ -7,9 +7,7 @@ import os
 import numpy as np
 import time
 import argparse
-import pdb
 import pandas as pd
-from tqdm import tqdm
 
 def stitching(file_path, wsi_object, downscale = 64):
 	start = time.time()
@@ -48,8 +46,8 @@ def patching(WSI_object, **kwargs):
 def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_dir, 
 				  patch_size = 256, step_size = 256, 
 				  seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False,
-				  'keep_ids': 'none', 'exclude_ids': 'none'},
-				  filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8}, 
+				  'keep_ids': 'none', 'exclude_ids': 'none', 'based_on': 'hed'},
+				  filter_params = {'min_pixel_count':25, 'a_t':100, 'a_h': 16, 'max_n_holes':8, 'max_bboxes':2, 'max_dist':200}, 
 				  vis_params = {'vis_level': -1, 'line_thickness': 500},
 				  patch_params = {'use_padding': True, 'contour_fn': 'four_pt'},
 				  patch_level = 0,
@@ -58,8 +56,6 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 				  stitch= False, 
 				  patch = False, auto_skip=True, process_list = None):
 	
-
-
 	slides = sorted(os.listdir(source))
 	slides = [slide for slide in slides if os.path.isfile(os.path.join(source, slide))]
 	if process_list is None:
@@ -87,7 +83,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 	patch_times = 0.
 	stitch_times = 0.
 
-	for i in tqdm(range(total)):
+	for i in range(total):
 		df.to_csv(os.path.join(save_dir, 'process_list_autogen.csv'), index=False)
 		idx = process_stack.index[i]
 		slide = process_stack.loc[idx, 'slide_id']
@@ -117,7 +113,6 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 			current_filter_params = {}
 			current_seg_params = {}
 			current_patch_params = {}
-
 
 			for key in vis_params.keys():
 				if legacy_support and key == 'vis_level':
@@ -183,7 +178,6 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 		df.loc[idx, 'vis_level'] = current_vis_params['vis_level']
 		df.loc[idx, 'seg_level'] = current_seg_params['seg_level']
 
-
 		seg_time_elapsed = -1
 		if seg:
 			WSI_object, seg_time_elapsed = segment(WSI_object, current_seg_params, current_filter_params) 
@@ -236,6 +230,8 @@ parser.add_argument('--patch_size', type = int, default=256,
 					help='patch_size')
 parser.add_argument('--patch', default=False, action='store_true')
 parser.add_argument('--seg', default=False, action='store_true')
+parser.add_argument('--base', default='hed', type=str, help='segmentation based on colour space (hed, gray)}')
+parser.add_argument('--max_bbox', type=int, default=-1, help='maximum number of bounding boxes')
 parser.add_argument('--stitch', default=False, action='store_true')
 parser.add_argument('--no_auto_skip', default=True, action='store_false')
 parser.add_argument('--save_dir', type = str,
@@ -276,9 +272,8 @@ if __name__ == '__main__':
 		if key not in ['source']:
 			os.makedirs(val, exist_ok=True)
 
-	seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False,
-				  'keep_ids': 'none', 'exclude_ids': 'none'}
-	filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8}
+	seg_params = {'seg_level': -1, 'based_on': args.base, 'contrast': 1, 'keep_ids': 'none', 'exclude_ids': 'none'}
+	filter_params = {'min_pixel_count':25, 'a_t':20, 'a_h': 16, 'max_n_holes':2, 'max_dist':200, 'max_bboxes':args.max_bbox}
 	vis_params = {'vis_level': -1, 'line_thickness': 250}
 	patch_params = {'use_padding': True, 'contour_fn': 'four_pt'}
 
