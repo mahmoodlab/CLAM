@@ -326,15 +326,25 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 
 	def __getitem__(self, idx):
 		slide_id = self.slide_data['slide_id'][idx]
+
+		# If slide_id has an extenstion (such as .ndpi), we remove it
+		# This is important because we add ".pt" at the end of the slide_id when trying to access the file
+		print(slide_id)
+		slide_id = re.sub(r'\.[^.]*$', '', slide_id)
+		print(slide_id)
+			
 		label = self.slide_data['label'][idx]
 		if type(self.data_dir) == dict:
 			source = self.slide_data['source'][idx]
 			data_dir = self.data_dir[source]
+			print('11111111')
 		else:
 			data_dir = self.data_dir
+			print('222222222222')
 
 		if not self.use_h5:
 			if self.data_dir:
+				print(data_dir)
 				full_path = os.path.join(data_dir, 'pt_files', '{}.pt'.format(slide_id))
 				features = torch.load(full_path)
 				return features, label
