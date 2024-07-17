@@ -4,7 +4,6 @@ import argparse
 import pdb
 import os
 import math
-import multiprocessing as mp
 
 # internal imports
 from utils.file_utils import save_pkl, load_pkl
@@ -20,67 +19,9 @@ import torch.nn.functional as F
 
 import pandas as pd
 import numpy as np
-
 import wandb
-import random
-
-def seed_torch(seed=7):
-    import random
-    random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed) # if you are using multi-GPU.
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
-
-
-def process_fold(i, args, results_queue):
-    print('\n')
-    print('PROCESS FOLDDDDDD')
-    print('\n')
-
-    seed_torch(args.seed)
-
-    wandb.init(
-        project="Path_pred_UNI_feats_no_geno",
-        name=f"fold_{i}_{args.seed}",
-        config={"dataset": "just_images_UNI_feats"}
-    )
-
-    print('\n')
-    print('Fold: ', i)
-    print('\n')
-
-    train_dataset, val_dataset, test_dataset = dataset.return_splits(from_id=False, 
-            csv_path='{}/splits_{}.csv'.format(args.split_dir, i))
-    
-    datasets = (train_dataset, val_dataset, test_dataset)
-    results, test_auc, val_auc, test_acc, val_acc = train(datasets, i, args)
-    
-    # Save the results
-    filename = os.path.join(args.results_dir, f'split_{i}_results.pkl')
-    save_pkl(filename, results)
-    
-    # Log metrics
-    metrics = {
-        "fold": i,
-        "test_auc": test_auc,
-        "val_auc": val_auc,
-        "test_acc": test_acc,
-        "val_acc": val_acc
-    }
-    results_queue.put(metrics)
-
-    #wandb.finish()
-
 
 def main(args):
-    print('\n')
-    print('XXXXXXXXXX')
-    print('\n')
     # create results directory if necessary
     if not os.path.isdir(args.results_dir):
         os.mkdir(args.results_dir)
@@ -98,33 +39,28 @@ def main(args):
     all_val_auc = []
     all_test_acc = []
     all_val_acc = []
-
     folds = np.arange(start, end)
-    results_queue = mp.Queue()
-    processes = []
-
     for i in folds:
-        print('\n')
-        print('fold',i)
-        print('\n')
-        p = mp.Process(target=process_fold, args=(i, args, results_queue))
-        processes.append(p)
-        p.start()
+        seed_torch(args.seed)
 
-    all_test_auc = []
-    all_val_auc = []
-    all_test_acc = []
-    all_val_acc = []
+        wandb.init(
+            project="Path_pred_UNI_feats_no_geno",
+            name=f"fold_{i}_{args.seed}_new",
+            config={"dataset": "just_images_UNI_feats"}
+        )
 
-    for p in processes:
-        p.join()
-
-    while not results_queue.empty():
-        metrics = results_queue.get()
-        all_test_auc.append(metrics["test_auc"])
-        all_val_auc.append(metrics["val_auc"])
-        all_test_acc.append(metrics["test_acc"])
-        all_val_acc.append(metrics["val_acc"])
+        train_dataset, val_dataset, test_dataset = dataset.return_splits(from_id=False, 
+                csv_path='{}/splits_{}.csv'.format(args.split_dir, i))
+        
+        datasets = (train_dataset, val_dataset, test_dataset)
+        results, test_auc, val_auc, test_acc, val_acc  = train(datasets, i, args)
+        all_test_auc.append(test_auc)
+        all_val_auc.append(val_auc)
+        all_test_acc.append(test_acc)
+        all_val_acc.append(val_acc)
+        #write results to pkl
+        filename = os.path.join(args.results_dir, 'split_{}_results.pkl'.format(i))
+        save_pkl(filename, results)
 
     final_df = pd.DataFrame({'folds': folds, 'test_auc': all_test_auc, 
         'val_auc': all_val_auc, 'test_acc': all_test_acc, 'val_acc' : all_val_acc})
@@ -169,7 +105,7 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', 'task_3_esophagus_tumor_grade'],)
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', 'task_3_esophagus_tumor_grade'])
 ### CLAM specific options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
                      help='disable instance-level clustering')
@@ -257,11 +193,17 @@ elif args.task == 'task_3_esophagus_tumor_grade':
                                             'LGD': 2,
                                             'HGD': 3, 'ID': 3, 'IMC': 3
                                         },
+                            #label_dict = {'normal': 0, 'NDBE': 0,
+                            #                'GM': 1,
+                            #                'LGD': 2, 'ID': 2,
+                            #                'HGD': 3, 'IMC': 3
+                            #            },
                             patient_strat= False,
                             ignore=['(no slide submitted)'])
 
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
+        
 else:
     raise NotImplementedError
     
@@ -293,10 +235,7 @@ for key, val in settings.items():
 
 if __name__ == "__main__":
     
-    
     results = main(args)
-
     print("finished!")
     print("end script")
-    
 

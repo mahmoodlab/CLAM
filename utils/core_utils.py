@@ -91,7 +91,7 @@ class EarlyStopping:
         torch.save(model.state_dict(), ckpt_name)
         self.val_loss_min = val_loss
 
-def train(datasets, cur, args, fold_num=0):
+def train(datasets, cur, args):
     """   
         train for a single fold
     """
@@ -105,9 +105,8 @@ def train(datasets, cur, args, fold_num=0):
         #writer = SummaryWriter(writer_dir, flush_secs=15)
 
     #else:
-    #    writer = None
     writer = None
-    
+
     print('\nInit train/val/test splits...', end=' ')
     train_split, val_split, test_split = datasets
     save_splits(datasets, ['train', 'val', 'test'], os.path.join(args.results_dir, 'splits_{}.csv'.format(cur)))
@@ -186,9 +185,9 @@ def train(datasets, cur, args, fold_num=0):
 
     for epoch in range(args.max_epochs):
         if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:     
-            train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn, fold_num = fold_num)
+            train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn)
             stop = validate_clam(cur, epoch, model, val_loader, args.n_classes, 
-                early_stopping, writer, loss_fn, args.results_dir, fold_num)
+                early_stopping, writer, loss_fn, args.results_dir)
         
         else:
             train_loop(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn)
@@ -225,7 +224,7 @@ def train(datasets, cur, args, fold_num=0):
     return results_dict, test_auc, val_auc, 1-test_error, 1-val_error 
 
 
-def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writer = None, loss_fn = None, fold_num = None):
+def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writer = None, loss_fn = None):
     model.train()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     inst_logger = Accuracy_Logger(n_classes=n_classes)
@@ -273,8 +272,6 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
     train_loss /= len(loader)
     train_error /= len(loader)
     
-        
-    
     if inst_count > 0:
         train_inst_loss /= inst_count
         print('\n')
@@ -291,14 +288,10 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
             writer.add_scalar('train/class_{}_acc'.format(i), acc, epoch)
         per_class_acc.append(acc)
 
-    #{'normal': 0, 'NDBE': 0,
-    #    'GM': 1,
-#        'LGD': 2,
-     #   'HGD': 3, 'ID': 3, 'IMC': 3
- #   },
-    
+
+
     wandb.log({
-        "fold_num": fold_num,
+        #"fold_num": fold_num,
         "train_loss": train_loss,
         "train_error": train_error,
         "train_clustering_loss": train_inst_loss,
@@ -307,7 +300,7 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         "train LGD acc": per_class_acc[2],
         "train HGD/ID/IMC acc": per_class_acc[3]
         })
-    print('fold num: {}, train_loss: {:.4f}, train_error: {:.4f}, train_clustering_loss: {:.4f}'.format(fold_num, train_loss, train_error, train_inst_loss))
+    print('train_loss: {:.4f}, train_error: {:.4f}, train_clustering_loss: {:.4f}'.format(train_loss, train_error, train_inst_loss))
 
     if writer:
         writer.add_scalar('train/loss', train_loss, epoch)
@@ -342,10 +335,10 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         # step
         optimizer.step()
         optimizer.zero_grad()
+
     # calculate loss and error for epoch
     train_loss /= len(loader)
     train_error /= len(loader)
-    #wandb.log({"train_loss": train_loss})
 
     print('Epoch: {}, train_loss: {:.4f}, train_error: {:.4f}'.format(epoch, train_loss, train_error))
     for i in range(n_classes):
@@ -417,7 +410,7 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
 
     return False
 
-def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, writer = None, loss_fn = None, results_dir = None, fold_num = None):
+def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, writer = None, loss_fn = None, results_dir = None):
     model.eval()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     inst_logger = Accuracy_Logger(n_classes=n_classes)
@@ -459,8 +452,6 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
 
     val_error /= len(loader)
     val_loss /= len(loader)
-    wandb.log({"val_loss": val_loss})
-        
 
     if n_classes == 2:
         auc = roc_auc_score(labels, prob[:, 1])
@@ -490,6 +481,14 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
         writer.add_scalar('val/error', val_error, epoch)
         writer.add_scalar('val/inst_loss', val_inst_loss, epoch)
 
+
+    for i in range(n_classes):
+        acc, correct, count = acc_logger.get_summary(i)
+        print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
+        
+        if writer and acc is not None:
+            writer.add_scalar('val/class_{}_acc'.format(i), acc, epoch)
+    
     per_class_acc = []
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
@@ -501,7 +500,7 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
         per_class_acc.append(acc)
 
     wandb.log({
-        "fold_num": fold_num,
+        #"fold_num": fold_num,
         "val_loss": val_loss,
         "val_error": val_error,
         "val_clustering_loss": val_inst_loss,
@@ -510,7 +509,6 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
         "val LGD acc": per_class_acc[2],
         "val HGD/ID/IMC acc": per_class_acc[3]
         })
-     
 
     if early_stopping:
         assert results_dir
