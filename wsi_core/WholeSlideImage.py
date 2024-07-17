@@ -1,33 +1,57 @@
 import math
+import multiprocessing as mp
 import os
 import time
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
-import multiprocessing as mp
+
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import openslide
-from PIL import Image
-import pdb
-import h5py
-import math
-from wsi_core.wsi_utils import savePatchIter_bag_hdf5, initialize_hdf5_bag, coord_generator, save_hdf5, sample_indices, screen_coords, isBlackPatch, isWhitePatch, to_percentiles
-import itertools
-from wsi_core.util_classes import isInContourV1, isInContourV2, isInContourV3_Easy, isInContourV3_Hard, Contour_Checking_fn
+from PIL import Image, ImageEnhance
+from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
+from shapely.ops import unary_union
+from skimage.morphology import dilation, square
+from skimage.measure import label, regionprops
+from sklearn.cluster import DBSCAN
+from skimage.color import hed2rgb, rgb2hed, rgb2gray, rgb2hsv
 from utils.file_utils import load_pkl, save_pkl
+from wsi_core.util_classes import (Contour_Checking_fn, isInContourV1,
+                                   isInContourV2, isInContourV3_Easy,
+                                   isInContourV3_Hard)
+from wsi_core.wsi_utils import (coord_generator, initialize_hdf5_bag,
+                                isBlackPatch, isWhitePatch, sample_indices,
+                                save_hdf5, savePatchIter_bag_hdf5,
+                                screen_coords, to_percentiles)
 
 Image.MAX_IMAGE_PIXELS = 933120000
 
+def polygons_to_mask(polygons, image_shape):
+    # Create a blank image with the same shape as the original image
+    mask = np.zeros((image_shape[1], image_shape[0]), dtype=np.uint8)
+
+    # Loop over each polygon
+    for polygon in polygons:
+        # Get the x and y coordinates of the polygon
+        x, y = polygon.exterior.coords.xy
+
+        # Convert the polygon coordinates to integer
+        poly_coords = np.array([list(zip(x, y))], dtype=np.int32)
+
+        # Fill the polygon area in the mask with 1
+        cv2.fillPoly(mask, poly_coords, 1)
+
+    return mask
+
 class WholeSlideImage(object):
-    def __init__(self, path):
+    def __init__(self, path, process_holes=False):
 
         """
         Args:
             path (str): fullpath to WSI file
         """
 
-#         self.name = ".".join(path.split("/")[-1].split('.')[:-1])
         self.name = os.path.splitext(os.path.basename(path))[0]
         self.wsi = openslide.open_slide(path)
         self.level_downsamples = self._assertLevelDownsamples()
@@ -36,6 +60,7 @@ class WholeSlideImage(object):
         self.contours_tissue = None
         self.contours_tumor = None
         self.hdf5_file = None
+        self.process_holes = process_holes
 
     def getOpenSlide(self):
         return self.wsi
@@ -80,19 +105,114 @@ class WholeSlideImage(object):
         # load segmentation results from pickle file
         import pickle
         asset_dict = load_pkl(mask_file)
-        self.holes_tissue = asset_dict['holes']
+        # self.holes_tissue = asset_dict['holes']
         self.contours_tissue = asset_dict['tissue']
 
     def saveSegmentation(self, mask_file):
         # save segmentation results using pickle
-        asset_dict = {'holes': self.holes_tissue, 'tissue': self.contours_tissue}
+        # asset_dict = {'holes': self.holes_tissue, 'tissue': self.contours_tissue}
+        asset_dict = {'tissue': self.contours_tissue}
         save_pkl(mask_file, asset_dict)
 
-    def segmentTissue(self, seg_level=0, sthresh=20, sthresh_up = 255, mthresh=7, close = 0, use_otsu=False, 
-                            filter_params={'a_t':100}, ref_patch_size=512, exclude_ids=[], keep_ids=[]):
-        """
-            Segment the tissue via HSV -> Median thresholding -> Binary threshold
-        """
+    def get_hed_mask(self, wsi_level, hed_contrast=1):
+        wsi_rgb = wsi_level.convert('RGB')
+        enhancer = ImageEnhance.Contrast(wsi_rgb)
+        # increase contrast
+        wsi_rgb = enhancer.enhance(hed_contrast)
+        # Separate the stains from the IHC image
+        img_hed = rgb2hed(wsi_rgb)
+        # Create an RGB image for each of the stains
+        foreground = np.zeros_like(img_hed[:, :, 0])
+        ihc = hed2rgb(np.stack((img_hed[:, :, 1], foreground, foreground), axis=-1)) # we are only intrested in 'e' of 'hed'
+        contrast_mask = ihc.copy()
+        contrast_mask[contrast_mask==1] = 0
+        contrast_mask[contrast_mask!=0] = 1
+        contrast_mask = rgb2gray(contrast_mask)
+        
+        # Count the number of 1s in the mask
+        count_ones = np.count_nonzero(contrast_mask)
+        # Get the total number of elements in the mask
+        total_elements = contrast_mask.size
+        # Calculate the ratio of 1s
+        coverage = np.round(count_ones / total_elements * 100)
+        #print(count_ones, total_elements, coverage)
+        return contrast_mask, coverage
+
+    def get_gray_mask(self, wsi_level, gray_contrast=20, gray_threshold=210):
+        wsi_level_gray = wsi_level.convert('L')
+        enhancer = ImageEnhance.Contrast(wsi_level_gray)
+        # increase contrast
+        wsi_contrast = enhancer.enhance(gray_contrast)
+        # filter gray
+        gray_mask = np.array(wsi_contrast) > gray_threshold
+        # remove spots where gray_mask is 255 and replace with 0
+        gray_mask = gray_mask.astype(np.uint8)
+        gray_mask[gray_mask == 0] = 255
+        contrast_mask = 1-gray_mask
+        count_ones = np.count_nonzero(contrast_mask)
+        # Get the total number of elements in the mask
+        total_elements = contrast_mask.size
+        # Calculate the ratio of 1s
+        coverage = np.round(count_ones / total_elements * 100)
+        return contrast_mask, coverage
+
+    def pen_marker_mask(self, img, mask, min_width=1200, kernel=(5, 5), black_marker=True, blue_marker=True, green_marker=True, red_marker=True, dilute=False):
+        artifact_mask = np.zeros_like(mask)
+        wsi_level_hsv = rgb2hsv(np.array(img)[:,:,:3])
+        wsi_level_hsv = (wsi_level_hsv * 255).astype('uint8')
+        if black_marker:
+            black = cv2.inRange(wsi_level_hsv, np.array([0, 0, 0]).astype('uint8'), np.array([255, 255, 165]).astype('uint8'))
+            # filter black mask
+            black_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, kernel)
+            black = cv2.morphologyEx(black, cv2.MORPH_OPEN, black_kernel)
+            _, _ = cv2.findContours(black, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            artifact_mask = cv2.bitwise_or(artifact_mask.astype('uint8'), black.astype('uint8'))
+        if blue_marker:
+            blue = cv2.inRange(wsi_level_hsv, np.array([130, 50, 30]).astype('uint8'), np.array([180,255,255]).astype('uint8'))
+            artifact_mask = cv2.bitwise_or(artifact_mask.astype('uint8'), blue.astype('uint8'))
+        if green_marker:
+            green = cv2.inRange(wsi_level_hsv, np.array([30, 30, 50]).astype('uint8'), np.array([130, 255, 255]).astype('uint8'))
+            artifact_mask = cv2.bitwise_or(artifact_mask.astype('uint8'), green.astype('uint8'))
+        if red_marker:
+            red1 = cv2.inRange(wsi_level_hsv, np.array([0, 30, 30]).astype('uint8'), np.array([30, 255, 255]).astype('uint8'))
+            red2 = cv2.inRange(wsi_level_hsv, np.array([200, 100, 100]).astype('uint8'), np.array([255, 255, 255]).astype('uint8'))
+            red = cv2.bitwise_or(red1,red2)
+            # filter red mask
+            red_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, kernel)
+            red = cv2.morphologyEx(red, cv2.MORPH_OPEN, red_kernel)
+            _, _ = cv2.findContours(red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            artifact_mask = cv2.bitwise_or(artifact_mask.astype('uint8'), red.astype('uint8'))
+
+        # dilute pen markers
+        if dilute:
+            selem = square(int(min_width/400)) #TODO
+            artifact_mask = dilation(artifact_mask, selem)
+
+        return artifact_mask
+
+    def mask_to_polygons(self, mask, min_pixel_count=30):
+        # Create a blank image with the same shape as the original image
+        contours, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        polygons = []
+        for contour in contours:
+            if len(contour) >= min_pixel_count:
+                polygon = Polygon(contour.reshape(-1, 2))
+                polygons.append(polygon)
+        buffered_polygons = [polygon.buffer(3) for polygon in polygons]
+        merged_polygons = unary_union(buffered_polygons)
+        if merged_polygons.geom_type == 'Polygon':
+            merged_polygons = [merged_polygons]
+        if isinstance(merged_polygons, MultiPolygon):
+            merged_polygons = list(merged_polygons.geoms)
+        if isinstance(merged_polygons, GeometryCollection):
+            merged_polygons = list(merged_polygons.geoms)
+        print('Number of polygons: ', len(merged_polygons))
+        return merged_polygons
+
+    def segmentTissue(self, based_on='hed', contrast=1, seg_level=0, ref_patch_size=512, exclude_ids=[], keep_ids=[],
+                    kernel=(5,5), dilute=False, he_cutoff_percent=5, artifact_detection=True, invert=False,
+                    min_width=200, filter_params={'min_pixel_count':20, 'a_t':2, 'a_h': 1, 'max_n_holes':8,'max_bboxes':2, 'max_dist':250}, **kwargs):
         
         def _filter_contours(contours, hierarchy, filter_params):
             """
@@ -121,7 +241,6 @@ class WholeSlideImage(object):
                     filtered.append(cont_idx)
                     all_holes.append(holes)
 
-
             foreground_contours = [contours[cont_idx] for cont_idx in filtered]
             
             hole_contours = []
@@ -142,21 +261,76 @@ class WholeSlideImage(object):
 
             return foreground_contours, hole_contours
         
-        img = np.array(self.wsi.read_region((0,0), seg_level, self.level_dim[seg_level]))
-        img_hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)  # Convert to HSV space
-        img_med = cv2.medianBlur(img_hsv[:,:,1], mthresh)  # Apply median blurring
-        
-       
-        # Thresholding
-        if use_otsu:
-            _, img_otsu = cv2.threshold(img_med, 0, sthresh_up, cv2.THRESH_OTSU+cv2.THRESH_BINARY)
-        else:
-            _, img_otsu = cv2.threshold(img_med, sthresh, sthresh_up, cv2.THRESH_BINARY)
+        img = self.wsi.read_region((0,0), seg_level, self.level_dim[seg_level])
 
-        # Morphological closing
-        if close > 0:
-            kernel = np.ones((close, close), np.uint8)
-            img_otsu = cv2.morphologyEx(img_otsu, cv2.MORPH_CLOSE, kernel)                 
+        if based_on == 'hed':
+            mask, coverage = self.get_hed_mask(img, hed_contrast=contrast)
+            # if coverage is less than 5% or greater than 90%, use gray mask
+            if (coverage < he_cutoff_percent) or (coverage > 90.0):
+                mask, _ = self.get_gray_mask(img)
+        elif based_on == 'gray':
+            mask, _ = self.get_gray_mask(img)
+        else:
+            NotImplementedError('Only HED and Gray tissue detection is currently supported')
+
+        if artifact_detection:
+            tissue_mask_normalized = cv2.normalize(mask, None, 0, 255, cv2.NORM_MINMAX).astype('uint8')
+            pen_markers = self.pen_marker_mask(img, mask, min_width, kernel, dilute=dilute)
+            mask = np.bitwise_and(tissue_mask_normalized.astype('int'), np.bitwise_not(pen_markers.astype('int')))
+        filled_mask = mask.astype(np.uint8)
+        
+        polygon_mask = np.zeros_like(filled_mask, dtype=np.uint8)
+        polygons = self.mask_to_polygons(filled_mask, filter_params['min_pixel_count'])
+
+        # Loop over each polygon
+        for polygon in polygons:
+            # Get the x and y coordinates of the polygon
+            x, y = polygon.exterior.coords.xy
+            # Convert the polygon coordinates to integer
+            poly_coords = np.array([list(zip(x, y))], dtype=np.int32)
+            # Fill the polygon area in the mask with 1
+            cv2.fillPoly(polygon_mask, poly_coords, 1)
+
+        labeled_mask = label(polygon_mask)
+
+        # get bounding box of the mask
+        props = sorted(regionprops(labeled_mask), key=lambda x: x.area, reverse=True)
+        # Get the centroids of the bounding boxes
+        centroids = [prop.centroid for prop in props]
+        # Apply DBSCAN clustering
+        eps = filter_params['max_dist']  # maximum distance between two samples for them to be considered as in the same neighborhood
+        min_samples = 1  # number of samples in a neighborhood for a point to be considered as a core point
+        clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(centroids)
+        labels = clustering.labels_
+
+        # Combine bounding boxes that belong to the same cluster
+        combined_props, bounding_masks, full_masks = [], [], []
+        for cluster_id in np.unique(labels):
+            if cluster_id != -1:  # ignore noise (cluster_id = -1)
+                cluster_props = [props[i] for i in np.where(labels == cluster_id)[0]]
+                minr = min(prop.bbox[0] for prop in cluster_props)
+                minc = min(prop.bbox[1] for prop in cluster_props)
+                maxr = max(prop.bbox[2] for prop in cluster_props)
+                maxc = max(prop.bbox[3] for prop in cluster_props)
+                combined_props.append((minr, minc, maxr, maxc))
+                # Create a single mask for the entire cluster
+                bounding_mask = np.zeros((maxr-minr, maxc-minc))
+                full_mask = np.zeros_like(mask)
+                for prop in cluster_props:
+                    full_mask[prop.bbox[0]:prop.bbox[2], prop.bbox[1]:prop.bbox[3]] = prop.filled_image
+                    bounding_mask[prop.bbox[0]-minr:prop.bbox[2]-minr, prop.bbox[1]-minc:prop.bbox[3]-minc] = prop.filled_image
+                bounding_masks.append(bounding_mask)
+                full_masks.append(full_mask)
+ 
+        # Order masks by area
+        areas = [np.sum(i) for i in bounding_masks]
+        sorted_indices = np.argsort(areas)[::-1]
+
+        bounding_masks = [bounding_masks[i] for i in sorted_indices]
+        mask = np.maximum.reduce([full_masks[i] for i in sorted_indices][:filter_params['max_bboxes']])
+        
+        if invert:
+            mask = cv2.bitwise_or(mask)
 
         scale = self.level_downsamples[seg_level]
         scaled_ref_patch_area = int(ref_patch_size**2 / (scale[0] * scale[1]))
@@ -164,10 +338,10 @@ class WholeSlideImage(object):
         filter_params['a_t'] = filter_params['a_t'] * scaled_ref_patch_area
         filter_params['a_h'] = filter_params['a_h'] * scaled_ref_patch_area
         
-        # Find and filter contours
-        contours, hierarchy = cv2.findContours(img_otsu, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE) # Find contours 
+        contours, hierarchy = cv2.findContours(mask.astype(np.uint8), cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
         hierarchy = np.squeeze(hierarchy, axis=(0,))[:, 2:]
-        if filter_params: foreground_contours, hole_contours = _filter_contours(contours, hierarchy, filter_params)  # Necessary for filtering out artifacts
+        if filter_params: 
+            foreground_contours, hole_contours = _filter_contours(contours, hierarchy, filter_params)  # Necessary for filtering out artifacts
 
         self.contours_tissue = self.scaleContourDim(foreground_contours, scale)
         self.holes_tissue = self.scaleHolesDim(hole_contours, scale)
@@ -218,9 +392,10 @@ class WholeSlideImage(object):
                         cv2.putText(img, "{}".format(idx), (cX, cY),
                                 cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 10)
 
-                for holes in self.holes_tissue:
-                    cv2.drawContours(img, self.scaleContourDim(holes, scale), 
-                                     -1, hole_color, line_thickness, lineType=cv2.LINE_8)
+                if self.process_holes:
+                    for holes in self.holes_tissue:
+                        cv2.drawContours(img, self.scaleContourDim(holes, scale), 
+                                        -1, hole_color, line_thickness, lineType=cv2.LINE_8)
             
             if self.contours_tumor is not None and annot_display:
                 cv2.drawContours(img, self.scaleContourDim(self.contours_tumor, scale), 
@@ -237,7 +412,6 @@ class WholeSlideImage(object):
             img = img.resize((int(w*resizeFactor), int(h*resizeFactor)))
        
         return img
-
 
     def createPatches_bag_hdf5(self, save_path, patch_level=0, patch_size=256, step_size=256, save_coord=True, **kwargs):
         contours = self.contours_tissue
@@ -263,7 +437,6 @@ class WholeSlideImage(object):
                 savePatchIter_bag_hdf5(patch)
 
         return self.hdf5_file
-
 
     def _getPatchGenerator(self, cont, cont_idx, patch_level, save_path, patch_size=256, step_size=256, custom_downsample=1,
         white_black=True, white_thresh=15, black_thresh=50, contour_fn='four_pt', use_padding=True):
@@ -380,7 +553,8 @@ class WholeSlideImage(object):
             if (idx + 1) % fp_chunk_size == fp_chunk_size:
                 print('Processing contour {}/{}'.format(idx, n_contours))
             
-            asset_dict, attr_dict = self.process_contour(cont, self.holes_tissue[idx], patch_level, save_path, patch_size, step_size, **kwargs)
+            # asset_dict, attr_dict = self.process_contour(cont, self.holes_tissue[idx], patch_level, save_path, patch_size, step_size, **kwargs)
+            asset_dict, attr_dict = self.process_contour(cont, patch_level, save_path, patch_size, step_size, **kwargs)
             if len(asset_dict) > 0:
                 if init:
                     save_hdf5(save_path_hdf5, asset_dict, attr_dict, mode='w')
@@ -390,9 +564,8 @@ class WholeSlideImage(object):
 
         return self.hdf5_file
 
-
-    def process_contour(self, cont, contour_holes, patch_level, save_path, patch_size = 256, step_size = 256,
-        contour_fn='four_pt', use_padding=True, top_left=None, bot_right=None):
+    def process_contour(self, cont, patch_level, save_path, patch_size = 256, step_size = 256,
+        contour_fn='four_pt', use_padding=True, top_left=None, bot_right=None, contour_holes=None, **kwargs):
         start_x, start_y, w, h = cv2.boundingRect(cont) if cont is not None else (0, 0, self.level_dim[patch_level][0], self.level_dim[patch_level][1])
 
         patch_downsample = (int(self.level_downsamples[patch_level][0]), int(self.level_downsamples[patch_level][1]))
@@ -460,7 +633,7 @@ class WholeSlideImage(object):
         
         print('Extracted {} coordinates'.format(len(results)))
 
-        if len(results)>0:
+        if len(results)>1:
             asset_dict = {'coords' :          results}
             
             attr = {'patch_size' :            patch_size, # To be considered...
@@ -489,7 +662,7 @@ class WholeSlideImage(object):
                    patch_size=(256, 256), 
                    blank_canvas=False, canvas_color=(220, 20, 50), alpha=0.4, 
                    blur=False, overlap=0.0, 
-                   segment=True, use_holes=True,
+                   segment=True, use_holes=False,
                    convert_to_percentiles=False, 
                    binarize=False, thresh=0.5,
                    max_size=None,
@@ -673,8 +846,7 @@ class WholeSlideImage(object):
             img = img.resize((int(w*resizeFactor), int(h*resizeFactor)))
        
         return img
-
-    
+ 
     def block_blending(self, img, vis_level, top_left, bot_right, alpha=0.5, blank_canvas=False, block_size=1024):
         print('\ncomputing blend')
         downsample = self.level_downsamples[vis_level]
@@ -730,7 +902,6 @@ class WholeSlideImage(object):
 
             if use_holes:
                 cv2.drawContours(image=tissue_mask, contours=contours_holes[idx], contourIdx=-1, color=(0), offset=offset, thickness=-1)
-            # contours_holes = self._scaleContourDim(self.holes_tissue, scale, holes=True, area_thresh=area_thresh)
                 
         tissue_mask = tissue_mask.astype(bool)
         print('detected {}/{} of region as tissue'.format(tissue_mask.sum(), tissue_mask.size))
