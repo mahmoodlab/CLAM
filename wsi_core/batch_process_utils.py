@@ -32,17 +32,18 @@ def initialize_df(slides, seg_params, filter_params, vis_params, patch_params,
 		'status': np.full((total), 'tbp'),
 		# seg params
 		'seg_level': np.full((total), int(seg_params['seg_level']), dtype=np.int8),
-		'sthresh': np.full((total), int(seg_params['sthresh']), dtype=np.uint8),
-		'mthresh': np.full((total), int(seg_params['mthresh']), dtype=np.uint8),
-		'close': np.full((total), int(seg_params['close']), dtype=np.uint32),
-		'use_otsu': np.full((total), bool(seg_params['use_otsu']), dtype=bool),
+		'based_on': np.full((total), seg_params['based_on']),
+		'contrast': np.full((total), seg_params['contrast'], dtype=np.int8),
 		'keep_ids': np.full((total), seg_params['keep_ids']),
 		'exclude_ids': np.full((total), seg_params['exclude_ids']),
 		
 		# filter params
+		'min_pixel_count': np.full((total), int(filter_params['min_pixel_count']), dtype=np.float32),
 		'a_t': np.full((total), int(filter_params['a_t']), dtype=np.float32),
 		'a_h': np.full((total), int(filter_params['a_h']), dtype=np.float32),
 		'max_n_holes': np.full((total), int(filter_params['max_n_holes']), dtype=np.uint32),
+		'max_dist': np.full((total), int(filter_params['max_dist']), dtype=np.uint32),
+		'max_bboxes': np.full((total), int(filter_params['max_bboxes']), dtype=np.uint32),
 
 		# vis params
 		'vis_level': np.full((total), int(vis_params['vis_level']), dtype=np.int8),
