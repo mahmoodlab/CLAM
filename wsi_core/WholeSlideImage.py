@@ -374,6 +374,9 @@ class WholeSlideImage(object):
             return round(self.wsi.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER])
         except:
             return -1
+        
+        # TODO add approximate with mpp
+        # https://www.microscopesinternational.com/support/kb/article/ngn1284.aspx#:~:text=In%20general%2C%2020x%20slide%20scanners,for%200.25%20microns%20per%20pixel.
 
     def process_contours(self, save_path, patch_level=0, patch_size=256, step_size=256, **kwargs):
         save_path_hdf5 = os.path.join(save_path, str(self.name) + '.h5')

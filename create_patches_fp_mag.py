@@ -44,6 +44,9 @@ def patching(WSI_object, **kwargs):
 	patch_time_elapsed = time.time() - start_time
 	return file_path, patch_time_elapsed
 
+def compute_patch_info_from_magnification(WSI_Object, mag_size):
+	pass
+
 
 def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_dir, 
 				  patch_size = 256, step_size = 256, 
@@ -86,6 +89,9 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 	seg_times = 0.
 	patch_times = 0.
 	stitch_times = 0.
+
+	df.insert(0, "patch_level", -1)
+	df.insert(1, "patch_size", patch_size)
 
 	for i in tqdm(range(total)):
 		idx = process_stack.index[i]
@@ -194,6 +200,8 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
 		patch_time_elapsed = -1 # Default time
 		if patch:
+			# TODO: Calculate Patch level and patch size, step_size
+
 			current_patch_params.update({'patch_level': patch_level, 'patch_size': patch_size, 'step_size': step_size, 
 										 'save_path': patch_save_dir})
 			file_path, patch_time_elapsed = patching(WSI_object = WSI_object,  **current_patch_params,)
