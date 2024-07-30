@@ -32,6 +32,7 @@ class WholeSlideImage(object):
         self.wsi = openslide.open_slide(path)
         self.level_downsamples = self._assertLevelDownsamples()
         self.level_dim = self.wsi.level_dimensions
+        self.objective_power = self._assertObjectivePower()
     
         self.contours_tissue = None
         self.contours_tumor = None
@@ -367,6 +368,12 @@ class WholeSlideImage(object):
             level_downsamples.append(estimated_downsample) if estimated_downsample != (downsample, downsample) else level_downsamples.append((downsample, downsample))
         
         return level_downsamples
+
+    def _assertObjectivePower(self):
+        try:
+            return round(self.wsi.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER])
+        except:
+            return -1
 
     def process_contours(self, save_path, patch_level=0, patch_size=256, step_size=256, **kwargs):
         save_path_hdf5 = os.path.join(save_path, str(self.name) + '.h5')
