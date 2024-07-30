@@ -44,18 +44,33 @@ def patching(WSI_object, **kwargs):
 	patch_time_elapsed = time.time() - start_time
 	return file_path, patch_time_elapsed
 
-def compute_patch_info_from_magnification(WSI_Object, mag_size):
-	pass
+def get_patch_info_from_magnification(WSI_object, expected_mag_size, expected_patch_size):
+	objective_power = round(WSI_object.objective_power)
 
+	patch_level = -1
+	for i in range(len(WSI_object.level_downsamples)):
+		mag_size = objective_power / round(WSI_object.level_downsamples[i])
+		if mag_size < expected_mag_size:
+			break
+		patch_level += 1
+
+	# No matching patch level found, since magnification size is larger than objective power
+	if patch_level == -1:
+		return patch_level, expected_patch_size
+
+	mag_size = objective_power / round(WSI_object.level_downsamples[patch_level])
+	patch_size = round(expected_patch_size * mag_size / expected_mag_size)
+
+	return patch_level, patch_size
 
 def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_dir, 
-				  patch_size = 256, step_size = 256, 
+				  expected_patch_size = 256, step_size_overlap_perc = 0, 
 				  seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False,
 				  'keep_ids': 'none', 'exclude_ids': 'none'},
 				  filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8}, 
 				  vis_params = {'vis_level': -1, 'line_thickness': 500},
 				  patch_params = {'use_padding': True, 'contour_fn': 'four_pt'},
-				  mag_size = 20,
+				  expected_mag_size = 20,
 				  use_default_params = False, 
 				  seg = False, save_mask = True, 
 				  stitch= False, 
@@ -91,9 +106,11 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 	stitch_times = 0.
 
 	df.insert(0, "patch_level", -1)
-	df.insert(1, "patch_size", patch_size)
+	df.insert(1, "patch_size", -1)
+	df.insert(1, "step_size", -1)
 
 	for i in tqdm(range(total)):
+		df.to_csv(os.path.join(save_dir, 'process_list_autogen.csv'), index=False)
 		idx = process_stack.index[i]
 		slide = process_stack.loc[idx, 'slide_id']
 		print("\n\nprogress: {:.2f}, {}/{}".format(i/total, i, total))
@@ -200,12 +217,21 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
 		patch_time_elapsed = -1 # Default time
 		if patch:
-			# TODO: Calculate Patch level and patch size, step_size
+			patch_level, patch_size = get_patch_info_from_magnification(WSI_object, expected_mag_size, expected_patch_size)
+			step_size = round(patch_size * (1 - step_size_overlap_perc))
+
+			if patch_level == -1:
+				df.loc[idx, 'status'] = 'failed_patch'
+				continue
 
 			current_patch_params.update({'patch_level': patch_level, 'patch_size': patch_size, 'step_size': step_size, 
 										 'save_path': patch_save_dir})
 			file_path, patch_time_elapsed = patching(WSI_object = WSI_object,  **current_patch_params,)
-		
+
+			df.loc[idx, 'patch_level'] = patch_level
+			df.loc[idx, 'patch_size'] = patch_size
+			df.loc[idx, 'step_size'] = step_size
+
 		stitch_time_elapsed = -1
 		if stitch:
 			file_path = os.path.join(patch_save_dir, slide_id+'.h5')
@@ -219,7 +245,6 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 		print("stitching took {} seconds".format(stitch_time_elapsed))
 
 		df.loc[idx, 'status'] = 'processed'
-		df.to_csv(os.path.join(save_dir, 'process_list_autogen.csv'), index=False)
 
 		seg_times += seg_time_elapsed
 		patch_times += patch_time_elapsed
@@ -316,5 +341,5 @@ if __name__ == '__main__':
 											patch_size = args.patch_size, step_size=args.step_size, 
 											seg = args.seg,  use_default_params=False, save_mask = True, 
 											stitch= args.stitch,
-											mag_size=args.mag_size, patch = args.patch,
+											expected_mag_size=args.mag_size, patch = args.patch,
 											process_list = process_list, auto_skip=args.no_auto_skip)

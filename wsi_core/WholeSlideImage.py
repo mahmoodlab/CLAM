@@ -371,13 +371,23 @@ class WholeSlideImage(object):
 
     def _assertObjectivePower(self):
         try:
-            return round(self.wsi.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER])
+            return self.wsi.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
         except:
-            return -1
-        
-        # TODO add approximate with mpp
-        # https://www.microscopesinternational.com/support/kb/article/ngn1284.aspx#:~:text=In%20general%2C%2020x%20slide%20scanners,for%200.25%20microns%20per%20pixel.
+            pass
 
+        # If objective power is not provided, we check if microns per pixel (mpp)
+        # is provided, and use the general standard that 20x slide scanners represent
+        # 0.5 mpp for approximation. We also assume that mpp-x and mpp-y are similar.
+        # https://www.microscopesinternational.com/support/kb/article/ngn1284.aspx
+        try:
+            mpp_x = self.wsi.properties[openslide.PROPERTY_NAME_MPP_X]
+            mpp_y = self.wsi.properties[openslide.PROPERTY_NAME_MPP_Y]
+            assert(abs(mpp_x - mpp_y) < 0.01)
+
+            return 10.0 / ((mpp_x + mpp_y) / 2)
+        except:
+            return -1.0
+        
     def process_contours(self, save_path, patch_level=0, patch_size=256, step_size=256, **kwargs):
         save_path_hdf5 = os.path.join(save_path, str(self.name) + '.h5')
         print("Creating patches for: ", self.name, "...",)
