@@ -49,7 +49,9 @@ def get_patch_info_from_magnification(WSI_object, expected_mag_size, expected_pa
 
 	patch_level = -1
 	for i in range(len(WSI_object.level_downsamples)):
-		mag_size = objective_power / round(WSI_object.level_downsamples[i])
+		# TODO
+		assert(round(WSI_object.level_downsamples[i][0]) == round(WSI_object.level_downsamples[i][1]))
+		mag_size = objective_power / round(WSI_object.level_downsamples[i][0])
 		if mag_size < expected_mag_size:
 			break
 		patch_level += 1
@@ -58,7 +60,8 @@ def get_patch_info_from_magnification(WSI_object, expected_mag_size, expected_pa
 	if patch_level == -1:
 		return patch_level, expected_patch_size
 
-	mag_size = objective_power / round(WSI_object.level_downsamples[patch_level])
+
+	mag_size = objective_power / round(WSI_object.level_downsamples[patch_level][0])
 	patch_size = round(expected_patch_size * mag_size / expected_mag_size)
 
 	return patch_level, patch_size
@@ -105,9 +108,9 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 	patch_times = 0.
 	stitch_times = 0.
 
-	df.insert(0, "patch_level", -1)
-	df.insert(1, "patch_size", -1)
-	df.insert(1, "step_size", -1)
+	df.insert(1, "patch_level", -1)
+	df.insert(2, "patch_size", -1)
+	df.insert(3, "step_size", -1)
 
 	for i in tqdm(range(total)):
 		df.to_csv(os.path.join(save_dir, 'process_list_autogen.csv'), index=False)
@@ -264,8 +267,8 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 parser = argparse.ArgumentParser(description='seg and patch')
 parser.add_argument('--source', type = str,
 					help='path to folder containing raw wsi image files')
-parser.add_argument('--step_size', type = int, default=256,
-					help='step_size')
+parser.add_argument('--step_size_overlap_perc', type = float, default=0,
+					help='step_size overlap percentage')
 parser.add_argument('--patch_size', type = int, default=256,
 					help='patch_size')
 parser.add_argument('--patch', default=False, action='store_true')
@@ -312,8 +315,8 @@ if __name__ == '__main__':
 
 	seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False,
 				  'keep_ids': 'none', 'exclude_ids': 'none'}
-	filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8}
-	vis_params = {'vis_level': -1, 'line_thickness': 250}
+	filter_params = {'a_t':16, 'a_h': 4, 'max_n_holes':8}
+	vis_params = {'vis_level': -1, 'line_thickness': 100}
 	patch_params = {'use_padding': True, 'contour_fn': 'four_pt'}
 
 	if args.preset:
@@ -338,8 +341,8 @@ if __name__ == '__main__':
 	print(parameters)
 
 	seg_times, patch_times = seg_and_patch(**directories, **parameters,
-											patch_size = args.patch_size, step_size=args.step_size, 
-											seg = args.seg,  use_default_params=False, save_mask = True, 
-											stitch= args.stitch,
-											expected_mag_size=args.mag_size, patch = args.patch,
-											process_list = process_list, auto_skip=args.no_auto_skip)
+											expected_patch_size=args.patch_size, step_size_overlap_perc=args.step_size_overlap_perc, 
+											seg=args.seg,  use_default_params=False, save_mask=True, 
+											stitch=args.stitch,
+											expected_mag_size=args.mag_size, patch=args.patch,
+											process_list=process_list, auto_skip=args.no_auto_skip)

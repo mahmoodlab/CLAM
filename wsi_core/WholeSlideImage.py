@@ -371,7 +371,7 @@ class WholeSlideImage(object):
 
     def _assertObjectivePower(self):
         try:
-            return self.wsi.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
+            return float(self.wsi.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER])
         except:
             pass
 
@@ -380,8 +380,8 @@ class WholeSlideImage(object):
         # 0.5 mpp for approximation. We also assume that mpp-x and mpp-y are similar.
         # https://www.microscopesinternational.com/support/kb/article/ngn1284.aspx
         try:
-            mpp_x = self.wsi.properties[openslide.PROPERTY_NAME_MPP_X]
-            mpp_y = self.wsi.properties[openslide.PROPERTY_NAME_MPP_Y]
+            mpp_x = float(self.wsi.properties[openslide.PROPERTY_NAME_MPP_X])
+            mpp_y = float(self.wsi.properties[openslide.PROPERTY_NAME_MPP_Y])
             assert(abs(mpp_x - mpp_y) < 0.01)
 
             return 10.0 / ((mpp_x + mpp_y) / 2)
