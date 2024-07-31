@@ -3,6 +3,7 @@ from wsi_core.WholeSlideImage import WholeSlideImage
 from wsi_core.wsi_utils import StitchCoords
 from wsi_core.batch_process_utils import initialize_df
 # other imports
+import h5py
 import os
 import numpy as np
 import time
@@ -46,20 +47,27 @@ def patching(WSI_object, **kwargs):
 
 def get_patch_info_from_magnification(WSI_object, expected_mag_size, expected_patch_size):
 	objective_power = round(WSI_object.objective_power)
+	if objective_power == -1:
+		print("missing objective power")
+		return -1, expected_patch_size
 
+	# Calculate closest downsampling level for desired magnification size
 	patch_level = -1
 	for i in range(len(WSI_object.level_downsamples)):
-		# TODO
-		assert(round(WSI_object.level_downsamples[i][0]) == round(WSI_object.level_downsamples[i][1]))
+		if round(WSI_object.level_downsamples[i][0]) != round(WSI_object.level_downsamples[i][1]):
+			print(f"mismatch downsampling factor between x and y-axis at level {i}")
+			return -1, expected_patch_size
+
 		mag_size = objective_power / round(WSI_object.level_downsamples[i][0])
 		if mag_size < expected_mag_size:
 			break
+
 		patch_level += 1
 
 	# No matching patch level found, since magnification size is larger than objective power
 	if patch_level == -1:
-		return patch_level, expected_patch_size
-
+		print(f"expected magnification size ({expected_mag_size}) larger than objective power ({objective_power})")
+		return -1, expected_patch_size
 
 	mag_size = objective_power / round(WSI_object.level_downsamples[patch_level][0])
 	patch_size = round(expected_patch_size * mag_size / expected_mag_size)
@@ -67,7 +75,7 @@ def get_patch_info_from_magnification(WSI_object, expected_mag_size, expected_pa
 	return patch_level, patch_size
 
 def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_dir, 
-				  expected_patch_size = 256, step_size_overlap_perc = 0, 
+				  expected_patch_size = 256, step_size_overlap = 0, 
 				  seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False,
 				  'keep_ids': 'none', 'exclude_ids': 'none'},
 				  filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8}, 
@@ -78,14 +86,16 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 				  seg = False, save_mask = True, 
 				  stitch= False, 
 				  patch = False, auto_skip=True, process_list = None):
-	
 
 
 	slides = sorted(os.listdir(source))
 	slides = [slide for slide in slides if os.path.isfile(os.path.join(source, slide))]
 	if process_list is None:
 		df = initialize_df(slides, seg_params, filter_params, vis_params, patch_params)
-	
+		df.insert(1, 'patch_level', -1)
+		df.insert(2, 'patch_size', -1)
+		df.insert(3, 'step_size', -1)
+
 	else:
 		df = pd.read_csv(process_list)
 		df = initialize_df(df, seg_params, filter_params, vis_params, patch_params)
@@ -108,9 +118,6 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 	patch_times = 0.
 	stitch_times = 0.
 
-	df.insert(1, "patch_level", -1)
-	df.insert(2, "patch_size", -1)
-	df.insert(3, "step_size", -1)
 
 	for i in tqdm(range(total)):
 		df.to_csv(os.path.join(save_dir, 'process_list_autogen.csv'), index=False)
@@ -221,9 +228,10 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 		patch_time_elapsed = -1 # Default time
 		if patch:
 			patch_level, patch_size = get_patch_info_from_magnification(WSI_object, expected_mag_size, expected_patch_size)
-			step_size = round(patch_size * (1 - step_size_overlap_perc))
+			step_size = round(patch_size * (1 - step_size_overlap))
 
 			if patch_level == -1:
+				print('fail to get patch level for patching, aborting')
 				df.loc[idx, 'status'] = 'failed_patch'
 				continue
 
@@ -267,9 +275,9 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 parser = argparse.ArgumentParser(description='seg and patch')
 parser.add_argument('--source', type = str,
 					help='path to folder containing raw wsi image files')
-parser.add_argument('--step_size_overlap_perc', type = float, default=0,
-					help='step_size overlap percentage')
-parser.add_argument('--patch_size', type = int, default=256,
+parser.add_argument('--step_size_overlap', type = float, default=0,
+					help='patch overlap ratio (< 1)')
+parser.add_argument('--expected_patch_size', type = int, default=256,
 					help='patch_size')
 parser.add_argument('--patch', default=False, action='store_true')
 parser.add_argument('--seg', default=False, action='store_true')
@@ -279,7 +287,7 @@ parser.add_argument('--save_dir', type = str,
 					help='directory to save processed data')
 parser.add_argument('--preset', default=None, type=str,
 					help='predefined profile of default segmentation and filter parameters (.csv)')
-parser.add_argument('--mag_size', type=int, default=20, 
+parser.add_argument('--expected_mag_size', type=int, default=20, 
 					help='magnification size at which to patch')
 parser.add_argument('--process_list',  type = str, default=None,
 					help='name of list of images to process with parameters (.csv)')
@@ -341,8 +349,8 @@ if __name__ == '__main__':
 	print(parameters)
 
 	seg_times, patch_times = seg_and_patch(**directories, **parameters,
-											expected_patch_size=args.patch_size, step_size_overlap_perc=args.step_size_overlap_perc, 
+											expected_patch_size=args.expected_patch_size, step_size_overlap=args.step_size_overlap, 
 											seg=args.seg,  use_default_params=False, save_mask=True, 
 											stitch=args.stitch,
-											expected_mag_size=args.mag_size, patch=args.patch,
+											expected_mag_size=args.expected_mag_size, patch=args.patch,
 											process_list=process_list, auto_skip=args.no_auto_skip)

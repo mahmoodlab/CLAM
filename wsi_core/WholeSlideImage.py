@@ -377,7 +377,7 @@ class WholeSlideImage(object):
 
         # If objective power is not provided, we check if microns per pixel (mpp)
         # is provided, and use the general standard that 20x slide scanners represent
-        # 0.5 mpp for approximation. We also assume that mpp-x and mpp-y are similar.
+        # 0.5 mpp for approximation. For this, we require mpp-x and mpp-y to be similar.
         # https://www.microscopesinternational.com/support/kb/article/ngn1284.aspx
         try:
             mpp_x = float(self.wsi.properties[openslide.PROPERTY_NAME_MPP_X])
