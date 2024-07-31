@@ -3,7 +3,6 @@ from wsi_core.WholeSlideImage import WholeSlideImage
 from wsi_core.wsi_utils import StitchCoords
 from wsi_core.batch_process_utils import initialize_df
 # other imports
-import h5py
 import os
 import numpy as np
 import time
@@ -39,7 +38,6 @@ def patching(WSI_object, **kwargs):
 
 	# Patch
 	file_path = WSI_object.process_contours(**kwargs)
-
 
 	### Stop Patch Timer
 	patch_time_elapsed = time.time() - start_time
@@ -95,7 +93,6 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 		df.insert(1, 'patch_level', -1)
 		df.insert(2, 'patch_size', -1)
 		df.insert(3, 'step_size', -1)
-
 	else:
 		df = pd.read_csv(process_list)
 		df = initialize_df(df, seg_params, filter_params, vis_params, patch_params)
@@ -117,7 +114,6 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 	seg_times = 0.
 	patch_times = 0.
 	stitch_times = 0.
-
 
 	for i in tqdm(range(total)):
 		df.to_csv(os.path.join(save_dir, 'process_list_autogen.csv'), index=False)
@@ -254,7 +250,6 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 		print("segmentation took {} seconds".format(seg_time_elapsed))
 		print("patching took {} seconds".format(patch_time_elapsed))
 		print("stitching took {} seconds".format(stitch_time_elapsed))
-
 		df.loc[idx, 'status'] = 'processed'
 
 		seg_times += seg_time_elapsed
