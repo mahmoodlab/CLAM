@@ -4,6 +4,7 @@ import argparse
 import pdb
 from functools import partial
 
+import PIL
 import torch
 import torch.nn as nn
 import timm
@@ -80,15 +81,17 @@ if __name__ == '__main__':
 	model = model.to(device)
 	total = len(bags_dataset)
 
-	loader_kwargs = {'num_workers': 8, 'pin_memory': True} if device.type == "cuda" else {}
+	loader_kwargs = {'num_workers': 0, 'pin_memory': True} if device.type == "cuda" else {}
 
 	for bag_candidate_idx in tqdm(range(total)):
-		slide_id = bags_dataset[bag_candidate_idx].split(args.slide_ext)[0]
+		# slide_id = bags_dataset[bag_candidate_idx].split(args.slide_ext)[0]
+		slide_id = str(bags_dataset[bag_candidate_idx])
 		bag_name = slide_id+'.h5'
 		h5_file_path = os.path.join(args.data_h5_dir, 'patches', bag_name)
 		slide_file_path = os.path.join(args.data_slide_dir, slide_id+args.slide_ext)
 		print('\nprogress: {}/{}'.format(bag_candidate_idx, total))
 		print(slide_id)
+
 
 		if not args.no_auto_skip and slide_id+'.pt' in dest_files:
 			print('skipped {}'.format(slide_id))
@@ -96,6 +99,7 @@ if __name__ == '__main__':
 
 		output_path = os.path.join(args.feat_dir, 'h5_files', bag_name)
 		time_start = time.time()
+		PIL.Image.MAX_IMAGE_PIXELS = None
 		wsi = openslide.open_slide(slide_file_path)
 		dataset = Whole_Slide_Bag_FP(file_path=h5_file_path, 
 							   		 wsi=wsi, 
