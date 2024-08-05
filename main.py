@@ -64,6 +64,7 @@ def main(args):
         save_name = 'summary.csv'
     final_df.to_csv(os.path.join(args.results_dir, save_name))
 
+
 # Generic training settings
 parser = argparse.ArgumentParser(description='Configurations for WSI Training')
 parser.add_argument('--data_root_dir', type=str, default=None, 
@@ -98,7 +99,7 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping','biomarker_ER'])
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping','biomarker_ER'], default='biomarker_ER')
 ### CLAM specific options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
                      help='disable instance-level clustering')
@@ -180,13 +181,13 @@ elif args.task == 'task_2_tumor_subtyping':
 elif args.task == 'biomarker_ER':
     args.n_classes = 2
     dataset = Generic_MIL_Dataset(
-                            csv_path='/mnt/EncryptedDisk2/BreastData/Studies/CLAM/csv_for_training.csv',
-                            data_dir='/mnt/EncryptedDisk2/BreastData/Studies/CLAM/features',
+                            csv_path='/mnt/EncryptedDisk2/BreastData/Studies/Biomarkers/test_patches_ute/train_csv.csv',
+                            data_dir='/mnt/EncryptedDisk2/BreastData/Studies/Biomarkers/test_patches_ute/features',
                             shuffle=False,
                             seed=args.seed,
                             print_info=True,
                             label_col='ER',
-                            label_dict={'>= 1%': 0, '< 1%': 1},
+                            label_dict={'>= 1%': 1, '< 1%': 0},
                             patient_strat=False,
                             ignore=['Ki67', 'HER2', 'PR', 'Filepath'])
 

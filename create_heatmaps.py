@@ -185,7 +185,7 @@ if __name__ == '__main__':
     'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift}
 
     for i in tqdm(range(len(process_stack))):
-        slide_name = process_stack.loc[i, 'slide_id']
+        slide_name = str(process_stack.loc[i, 'slide_id'])
         if data_args.slide_ext not in slide_name:
             slide_name+=data_args.slide_ext
         print('\nprocessing: ', slide_name)	

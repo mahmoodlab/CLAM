@@ -43,13 +43,13 @@ elif args.task == 'task_2_tumor_subtyping':
 
 elif args.task == 'biomarker_ER':
     args.n_classes = 2
-    dataset = Generic_MIL_Dataset(csv_path='/mnt/EncryptedDisk2/BreastData/Studies/CLAM/csv/CLAM_HUNT0_level_0_magnification_40.0.csv',
-                                  data_dir='/mnt/EncryptedDisk2/BreastData/Studies/CLAM/features',
+    dataset = Generic_MIL_Dataset(csv_path='/mnt/EncryptedDisk2/BreastData/Studies/Biomarkers/test_patches_ute/train_csv.csv',
+                                  data_dir='/mnt/EncryptedDisk2/BreastData/Studies/Biomarkers/test_patches_ute/features',
                                   shuffle=False,
                                   seed=args.seed,
                                   print_info=True,
                                   label_col='ER',
-                                  label_dict={'>= 1%': 0, '< 1%': 1},
+                                  label_dict={'>= 1%': 1, '< 1%': 0},
                                   patient_strat=False,
                                   ignore=['Ki67','HER2','PR','Filepath'])
 
