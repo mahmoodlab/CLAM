@@ -125,7 +125,7 @@ class WholeSlideImage(object):
         foreground = np.zeros_like(img_hed[:, :, 0])
         ihc = hed2rgb(np.stack((img_hed[:, :, 1], foreground, foreground), axis=-1)) # we are only intrested in 'e' of 'hed'
         contrast_mask = ihc.copy()
-        contrast_mask[contrast_mask==1] = 0
+        contrast_mask[contrast_mask>0.95] = 0 #Set all values close to white as background
         contrast_mask[contrast_mask!=0] = 1
         contrast_mask = rgb2gray(contrast_mask)
         
@@ -212,7 +212,7 @@ class WholeSlideImage(object):
 
     def segmentTissue(self, based_on='hed', contrast=1, seg_level=0, ref_patch_size=512, exclude_ids=[], keep_ids=[],
                     kernel=(5,5), dilute=False, he_cutoff_percent=5, artifact_detection=True, invert=False,
-                    min_width=200, filter_params={'min_pixel_count':20, 'a_t':2, 'a_h': 1, 'max_n_holes':8,'max_bboxes':2, 'max_dist':250}, **kwargs):
+                    min_width=200, filter_params={'min_pixel_count':20, 'a_t':2, 'a_h': 1, 'max_n_holes':8, 'max_bboxes':2, 'max_dist':250}, **kwargs):
         
         def _filter_contours(contours, hierarchy, filter_params):
             """
