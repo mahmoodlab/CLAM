@@ -4,6 +4,7 @@ from optuna.importance import get_param_importances
 import optuna.visualization as vis
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+import tensorflow as tf
 
 def visualize_study(trial_id):
     study_name = get_study_name(trial_id) # 148,149,150
@@ -30,6 +31,6 @@ def get_study_name(trial_id):
     return study_name
 
 if __name__ == "__main__":
-    trial_id = 148 #148,149,150
+    trial_id = 2 #148,149,150
     visualize_study(trial_id)
 

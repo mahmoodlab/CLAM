@@ -37,15 +37,15 @@ encoder_arguments:
   target_img_size: 224 # resize images to this size before feeding to encoder
 model_arguments: 
   # arguments for initializing model from checkpoint
-  ckpt_path: /home/utes/workspace/CLAM/results/mil030824_224437_s1/s_2_checkpoint.pt
+  ckpt_path: /home/utes/workspace/CLAM/results/clam_sb050824_133356_s1/s_8_checkpoint.pt
   model_type: clam_sb # see utils/eval_utils/
   initiate_fn: initiate_model # see utils/eval_utils/
-  model_size: big
-  drop_out: 0.00435772895944214
+  model_size: small
+  drop_out: 0.2732857481653196
   embed_dim: 1024
 heatmap_arguments:
   # downsample at which to visualize heatmap (-1 refers to downsample closest to 32x downsample)
-  vis_level: 1
+  vis_level: -1
   # transparency for overlaying heatmap on background (0: background only, 1: foreground only)
   alpha: 0.4
   # whether to use a blank canvas instead of original slide
@@ -55,7 +55,7 @@ heatmap_arguments:
   # file extension for saving heatmap/original image
   save_ext: jpg
   # whether to calculate percentile scores in reference to the set of non-overlapping patches
-  use_ref_scores: true
+  use_ref_scores: false
   # whether to use gaussian blur for further smoothing
   blur: false
   # whether to shift the 4 default corner points for checking if a patch is inside a foreground contour

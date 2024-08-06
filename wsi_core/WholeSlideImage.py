@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import multiprocessing as mp
 import cv2
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import numpy as np
 import openslide
 from PIL import Image
@@ -636,6 +636,8 @@ class WholeSlideImage(object):
                 
                 # image block (either blank canvas or orig image)
                 img_block = img[coord[1]:coord[1]+patch_size[1], coord[0]:coord[0]+patch_size[0]].copy()
+
+                cmap = plt.get_cmap(cmap)
 
                 # color block (cmap applied to attention block)
                 color_block = (cmap(raw_block) * 255)[:,:,:3].astype(np.uint8)
