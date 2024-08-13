@@ -181,6 +181,7 @@ def train(datasets, cur, args):
         early_stopping = None
     print('Done!')
 
+
     for epoch in range(args.max_epochs):
         if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:     
             train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn)
@@ -200,8 +201,15 @@ def train(datasets, cur, args):
     else:
         torch.save(model.state_dict(), os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur)))
 
-    _, val_error, val_auc, _= summary(model, val_loader, args.n_classes)
+    _, val_error, val_auc, val_acc_loger= summary(model, val_loader, args.n_classes)
     print('Val error: {:.4f}, ROC AUC: {:.4f}'.format(val_error, val_auc))
+
+    for i in range(args.n_classes):
+        val_acc, val_correct, val_count = val_acc_loger.get_summary(i)
+        print('class {}: acc {}, correct {}/{}'.format(i, val_acc, val_correct, val_count))
+
+        if writer:
+            writer.add_scalar('final/val_class_{}_acc'.format(i), val_acc, 0)
 
     results_dict, test_error, test_auc, acc_logger = summary(model, test_loader, args.n_classes)
     print('Test error: {:.4f}, ROC AUC: {:.4f}'.format(test_error, test_auc))

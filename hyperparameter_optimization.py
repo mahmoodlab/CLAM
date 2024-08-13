@@ -3,9 +3,12 @@ import optuna
 import subprocess
 import os
 from datetime import datetime, date
-import pandas as pd
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
-# TODO before running : check available GPU , set model_type, set task(in main.py default=)
+""" before running : check available GPU , set model_type, set task(in main.py default=), 
+    adjust weights according to class per sample distribution  
+    study can be run with multiple instances if study_name is set to existing name      """
+
 model = 'clam_sb'
 gpu = 0
 
@@ -14,14 +17,40 @@ def get_date_time():
     curr_time = "".join(str(datetime.now()).split(" ")[1].split(".")[0].split(":"))
     return curr_date, curr_time
 
-def parse_metrics(log_dir):
-    df = pd.read_csv(log_dir)
 
-    # Find the rows with the highest val_auc and val_acc
-    best_val_auc_row = df.loc[df['val_auc'].idxmax()]
-    best_val_auc = best_val_auc_row['val_auc']
+def parse_metrics(log_dir, weights=(0.8, 0.2)):
+    best_weighted_mean = 0
+    best_trial = None
 
-    return best_val_auc
+    event_files = []
+    for dirpath, _, filenames in os.walk(log_dir):
+        for filename in filenames:
+            if filename.startswith('events.out'):
+                event_files.append(os.path.join(dirpath, filename))
+
+    for idx, event_file in enumerate(event_files):
+        event_accumulator = EventAccumulator(event_file)
+        event_accumulator.Reload()
+
+        # Get the scalar values for each class
+        class_0_acc = event_accumulator.Scalars('final/val_class_0_acc')
+        class_1_acc = event_accumulator.Scalars('final/val_class_1_acc')
+
+        if class_0_acc and class_1_acc:
+            # Assuming you want to use the latest values
+            latest_class_0_acc = max(scalar.value for scalar in class_0_acc)
+            latest_class_1_acc = max(scalar.value for scalar in class_1_acc)
+
+            # Compute the weighted mean
+            weighted_mean = (weights[0] * latest_class_0_acc +
+                             weights[1] * latest_class_1_acc)
+
+            # Update the best weighted mean
+            if weighted_mean > best_weighted_mean:
+                best_weighted_mean = weighted_mean
+                best_trial = idx
+
+    return best_weighted_mean
 
 
 def run_training_script(args):
@@ -102,15 +131,11 @@ def objective(trial):
 
 
     # Define the log directory for TensorBoard logs
-    log_dir = f"./results/{exp_code}_s1/summary.csv"
+    log_dir = f"./results/{exp_code}_s1"
 
-    # Run the training script
     run_training_script(args)
+    metric = parse_metrics(log_dir)
 
-    # Extract the metric from TensorBoard logs
-    metric = parse_metrics(log_dir)  # Example metric
-
-    # Handle cases where the metric couldn't be extracted
     if metric is None:
         return float('inf')  # Return a high value if metric extraction fails
 
@@ -119,7 +144,8 @@ def objective(trial):
 
 if __name__ == "__main__":
     curr_date, _ = get_date_time()
-    study = optuna.create_study(direction="maximize", storage="sqlite:///example.db",study_name=(model + "_" + curr_date), load_if_exists=True)
+    # study = optuna.create_study(direction="maximize", storage="sqlite:///example.db",study_name=(model + "_max_weighted_acc_" + curr_date), load_if_exists=True)
+    study = optuna.create_study(direction="maximize", storage="sqlite:///example.db",study_name='clam_sb_max_weighted_acc_060824', load_if_exists=True)
     study.optimize(objective, n_trials=100)
 
     # Print the best found parameters
