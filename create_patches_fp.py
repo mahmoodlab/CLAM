@@ -1,13 +1,15 @@
+import argparse
+import os
+import time
+
+import numpy as np
+import pandas as pd
+
 # internal imports
+from wsi_core.batch_process_utils import initialize_df
 from wsi_core.WholeSlideImage import WholeSlideImage
 from wsi_core.wsi_utils import StitchCoords
-from wsi_core.batch_process_utils import initialize_df
-# other imports
-import os
-import numpy as np
-import time
-import argparse
-import pandas as pd
+
 
 def stitching(file_path, wsi_object, downscale = 64):
 	start = time.time()
@@ -45,7 +47,8 @@ def patching(WSI_object, **kwargs):
 
 def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_dir, 
 				  patch_size = 256, step_size = 256, 
-				  seg_params = {'seg_level': -1, 'keep_ids': 'none', 'exclude_ids': 'none', 'based_on': 'hed'},
+				  seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False,
+				  'keep_ids': 'none', 'exclude_ids': 'none', 'based_on': 'hed'},
 				  filter_params = {'min_pixel_count':25, 'a_t':100, 'a_h': 16, 'max_n_holes':8, 'max_bboxes':2, 'max_dist':200}, 
 				  vis_params = {'vis_level': -1, 'line_thickness': 500},
 				  patch_params = {'use_padding': True, 'contour_fn': 'four_pt'},
@@ -81,9 +84,10 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 	seg_times = 0.
 	patch_times = 0.
 	stitch_times = 0.
+	date = time.strftime('%d%m%y')
 
 	for i in range(total):
-		df.to_csv(os.path.join(save_dir, 'process_list_autogen.csv'), index=False)
+		df.to_csv(os.path.join(save_dir, 'process_list_'+{str(date)}+'.csv'), index=False)
 		idx = process_stack.index[i]
 		slide = process_stack.loc[idx, 'slide_id']
 		print("\n\nprogress: {:.2f}, {}/{}".format(i/total, i, total))
@@ -213,7 +217,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 	patch_times /= total
 	stitch_times /= total
 
-	df.to_csv(os.path.join(save_dir, 'process_list_autogen.csv'), index=False)
+	df.to_csv(os.path.join(save_dir, 'process_list_'+{str(date)}+'.csv'), index=False)
 	print("average segmentation time in s per slide: {}".format(seg_times))
 	print("average patching time in s per slide: {}".format(patch_times))
 	print("average stiching time in s per slide: {}".format(stitch_times))
