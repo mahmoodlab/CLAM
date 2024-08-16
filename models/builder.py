@@ -40,20 +40,26 @@ def get_encoder(model_name, target_img_size=224):
     print('loading model checkpoint')
     if model_name == 'resnet50_trunc':
         model = TimmCNNEncoder()
-    elif model_name == 'uni_v1':
+    elif model_name == 'uni':
         HAS_UNI, UNI_CKPT_PATH = has_UNI()
         assert HAS_UNI, 'UNI is not available'
         model = timm.create_model("vit_large_patch16_224",
+                            # img_size = 224,
+                            # patch_size = 16,
                             init_values=1e-5, 
                             num_classes=0, 
                             dynamic_img_size=True)
         model.load_state_dict(torch.load(UNI_CKPT_PATH, map_location="cpu"), strict=True)
-    elif model_name == 'conch_v1':
+    elif model_name == 'conch':
         HAS_CONCH, CONCH_CKPT_PATH = has_CONCH()
         assert HAS_CONCH, 'CONCH is not available'
         from conch.open_clip_custom import create_model_from_pretrained
         model, _ = create_model_from_pretrained("conch_ViT-B-16", CONCH_CKPT_PATH)
         model.forward = partial(model.encode_image, proj_contrast=False, normalize=False)
+    elif model_name == 'virchow':
+        return NotImplementedError('model {} not implemented'.format(model_name))
+    elif model_name == 'gigapath':
+        return NotImplementedError('model {} not implemented'.format(model_name))
     else:
         raise NotImplementedError('model {} not implemented'.format(model_name))
     

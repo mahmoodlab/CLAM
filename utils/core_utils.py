@@ -3,8 +3,11 @@ import torch
 from utils.utils import *
 import os
 from dataset_modules.dataset_generic import save_splits
+from models.model_dsmil import *
 from models.model_mil import MIL_fc, MIL_fc_mc
+# from models.model_dgcn import DeepGraphConv
 from models.model_clam import CLAM_MB, CLAM_SB
+# from models.model_cluster import MIL_Cluster_FC
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.metrics import auc as calc_auc
@@ -100,12 +103,20 @@ def train(datasets, cur, args):
     if not os.path.isdir(writer_dir):
         os.mkdir(writer_dir)
 
-    #if args.log_data:
-        #from tensorboardX import SummaryWriter
-        #writer = SummaryWriter(writer_dir, flush_secs=15)
-
-    #else:
     writer = None
+
+    if args.log_data:
+        mode = 'online'
+    else:
+        mode = 'disabled'
+
+    wandb.init(
+        project="be_mil",
+        name=f"{args.task}",
+        config={"dataset": "be", "model": "clam_sb", "seed": args.seed},
+        group=f"{args.model_type}",
+        mode=mode
+        )
 
     print('\nInit train/val/test splits...', end=' ')
     train_split, val_split, test_split = datasets
@@ -208,19 +219,18 @@ def train(datasets, cur, args):
     results_dict, test_error, test_auc, acc_logger = summary(model, test_loader, args.n_classes)
     print('Test error: {:.4f}, ROC AUC: {:.4f}'.format(test_error, test_auc))
 
+    test_acc = {}
     for i in range(args.n_classes):
         acc, correct, count = acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
 
-        if writer:
-            writer.add_scalar('final/test_class_{}_acc'.format(i), acc, 0)
+        test_acc.update({f'test/test_class_{i}_acc': acc})
 
-    if writer:
-        writer.add_scalar('final/val_error', val_error, 0)
-        writer.add_scalar('final/val_auc', val_auc, 0)
-        writer.add_scalar('final/test_error', test_error, 0)
-        writer.add_scalar('final/test_auc', test_auc, 0)
-        writer.close()
+    test_logs = {'test/val_error': val_error, 'test/val_auc': val_auc, 'test/test_error': test_error, 'test/test_auc': test_auc}
+    test_logs.update(test_acc)
+    wandb.log(test_logs)
+
+    wandb.finish()
     return results_dict, test_auc, val_auc, 1-test_error, 1-val_error 
 
 
@@ -280,32 +290,22 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
             print('class {} clustering acc {}: correct {}/{}'.format(i, acc, correct, count))
 
     print('Epoch: {}, train_loss: {:.4f}, train_clustering_loss:  {:.4f}, train_error: {:.4f}'.format(epoch, train_loss, train_inst_loss,  train_error))
-    per_class_acc = []
+    per_class_acc = {}
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-        if writer and acc is not None:
-            writer.add_scalar('train/class_{}_acc'.format(i), acc, epoch)
-        per_class_acc.append(acc)
+        per_class_acc.update({f'train/class_{i}_acc': acc})
 
+    logs = {
+        "train/loss": train_loss,
+        "train/error": train_error,
+        "train/clustering_loss": train_inst_loss,
+        }
+    logs.update(per_class_acc)
 
-
-    wandb.log({
-        #"fold_num": fold_num,
-        "train_loss": train_loss,
-        "train_error": train_error,
-        "train_clustering_loss": train_inst_loss,
-        "train normal/NDBE acc": per_class_acc[0],
-        "train GM acc": per_class_acc[1],
-        "train LGD acc": per_class_acc[2],
-        "train HGD/ID/IMC acc": per_class_acc[3]
-        })
+    wandb.log(logs)
+    
     print('train_loss: {:.4f}, train_error: {:.4f}, train_clustering_loss: {:.4f}'.format(train_loss, train_error, train_inst_loss))
-
-    if writer:
-        writer.add_scalar('train/loss', train_loss, epoch)
-        writer.add_scalar('train/error', train_error, epoch)
-        writer.add_scalar('train/clustering_loss', train_inst_loss, epoch)
 
 def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_fn = None):   
     model.train()
@@ -340,16 +340,20 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
     train_loss /= len(loader)
     train_error /= len(loader)
 
-    print('Epoch: {}, train_loss: {:.4f}, train_error: {:.4f}'.format(epoch, train_loss, train_error))
+    per_class_acc = {}
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-        if writer:
-            writer.add_scalar('train/class_{}_acc'.format(i), acc, epoch)
+        per_class_acc.update({f'train/class_{i}_acc': acc})
 
-    if writer:
-        writer.add_scalar('train/loss', train_loss, epoch)
-        writer.add_scalar('train/error', train_error, epoch)
+    train_logs = {
+        "train/loss": train_loss,
+        "train/error": train_error,
+        }
+    train_logs.update(per_class_acc)
+
+    wandb.log(train_logs)
+    print('Epoch: {}, train_loss: {:.4f}, train_error: {:.4f}'.format(epoch, train_loss, train_error))
 
    
 def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer = None, loss_fn = None, results_dir=None):
@@ -378,27 +382,30 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
             val_loss += loss.item()
             error = calculate_error(Y_hat, label)
             val_error += error
-            
 
     val_error /= len(loader)
     val_loss /= len(loader)
 
     if n_classes == 2:
         auc = roc_auc_score(labels, prob[:, 1])
-    
     else:
         auc = roc_auc_score(labels, prob, multi_class='ovr')
     
-    
-    if writer:
-        writer.add_scalar('val/loss', val_loss, epoch)
-        writer.add_scalar('val/auc', auc, epoch)
-        writer.add_scalar('val/error', val_error, epoch)
-
     print('\nVal Set, val_loss: {:.4f}, val_error: {:.4f}, auc: {:.4f}'.format(val_loss, val_error, auc))
+    per_class_acc = {}
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))     
+        per_class_acc.update({f'val/class_{i}_acc': acc})
+
+    val_logs = {
+        "val/loss": val_loss,
+        "val/error": val_error,
+        "val/auc": auc
+        }
+    val_logs.update(per_class_acc)
+
+    wandb.log(val_logs)
 
     if early_stopping:
         assert results_dir
@@ -475,40 +482,22 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
             acc, correct, count = inst_logger.get_summary(i)
             print('class {} clustering acc {}: correct {}/{}'.format(i, acc, correct, count))
     
-    if writer:
-        writer.add_scalar('val/loss', val_loss, epoch)
-        writer.add_scalar('val/auc', auc, epoch)
-        writer.add_scalar('val/error', val_error, epoch)
-        writer.add_scalar('val/inst_loss', val_inst_loss, epoch)
-
-
+    per_class_acc = {}
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
         
-        if writer and acc is not None:
-            writer.add_scalar('val/class_{}_acc'.format(i), acc, epoch)
-    
-    per_class_acc = []
-    for i in range(n_classes):
-        acc, correct, count = acc_logger.get_summary(i)
-        print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-        
-        if writer and acc is not None:
-            writer.add_scalar('val/class_{}_acc'.format(i), acc, epoch)
-        
-        per_class_acc.append(acc)
+        per_class_acc.update({f'val/class_{i}_acc': acc})
 
-    wandb.log({
-        #"fold_num": fold_num,
-        "val_loss": val_loss,
-        "val_error": val_error,
-        "val_clustering_loss": val_inst_loss,
-        "val normal/NDBE acc": per_class_acc[0],
-        "val GM acc": per_class_acc[1],
-        "val LGD acc": per_class_acc[2],
-        "val HGD/ID/IMC acc": per_class_acc[3]
-        })
+    val_logs = {
+        "val/loss": val_loss,
+        "val/error": val_error,
+        "val/clustering_loss": val_inst_loss,
+        "val/auc": auc
+        }
+    val_logs.update(per_class_acc)
+
+    wandb.log(val_logs)
 
     if early_stopping:
         assert results_dir
