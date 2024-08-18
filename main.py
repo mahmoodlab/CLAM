@@ -208,7 +208,7 @@ else:
 if not os.path.isdir(args.results_dir):
     os.mkdir(args.results_dir)
 
-args.results_dir = os.path.join(args.results_dir, str(args.exp_code) + '_s{}'.format(args.seed))
+args.results_dir = os.path.join(args.results_dir, f'{args.exp_code}_{args.model_type}')
 if not os.path.isdir(args.results_dir):
     os.mkdir(args.results_dir)
 

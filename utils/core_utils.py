@@ -112,8 +112,8 @@ def train(datasets, cur, args):
 
     wandb.init(
         project="be_mil",
-        name=f"{args.task}",
-        config={"dataset": "be", "model": "clam_sb", "seed": args.seed},
+        name=f"{args.exp_code}_{args.model_type}",
+        config={"dataset": args.task, "model": args.model_type, "seed": args.seed, "bag_loss": args.bag_loss, "inst_loss": args.inst_loss, "B": args.B, "subtyping": args.subtyping, "model_size": args.model_size, "drop_out": args.drop_out, "embed_dim": args.embed_dim, "weighted_sample": args.weighted_sample},
         group=f"{args.model_type}",
         mode=mode
         )
