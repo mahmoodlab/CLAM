@@ -1,12 +1,13 @@
 import numpy as np
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from models.model_dsmil import *
 from models.model_mil import MIL_fc, MIL_fc_mc
-from models.model_clam import CLAM_SB, CLAM_MB
-import pdb
-import os
+# from models.model_dgcn import DeepGraphConv
+from models.model_clam import CLAM_MB, CLAM_SB
+# from models.model_cluster import MIL_Cluster_FC
+from models.model_transmil import TransMIL
+
 import pandas as pd
 from utils.utils import *
 from utils.core_utils import Accuracy_Logger
@@ -25,6 +26,17 @@ def initiate_model(args, ckpt_path, device='cuda'):
         model = CLAM_SB(**model_dict)
     elif args.model_type =='clam_mb':
         model = CLAM_MB(**model_dict)
+    elif args.model_type == 'dsmil':
+        i_classifier = FCLayer(in_size=args.embed_dim, out_size=model_dict['n_classes'])
+        b_classifier = BClassifier(input_size=args.embed_dim, output_class=model_dict['n_classes'], dropout_v=0.0)
+        model = MILNet(i_classifier, b_classifier)
+    # elif args.model_type == 'dgcn':
+        # model_dict = {'embed_dim': args.embed_dim}
+        # model = DeepGraphConv(num_features=model_dict['embed_dim'], n_classes=args.n_classes)
+    # elif args.model_type == 'mi_fcn':
+        # model = MIL_Cluster_FC(embed_dim=args.embed_dim, n_classes=args.n_classes)
+    elif args.model_type == 'trans_mil':
+        model = TransMIL(args.embed_dim, n_classes = args.n_classes)
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
             model = MIL_fc_mc(**model_dict)

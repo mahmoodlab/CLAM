@@ -54,7 +54,7 @@ def main(args):
         save_name = 'summary_partial_{}_{}.csv'.format(start, end)
     else:
         save_name = 'summary.csv'
-    final_df.to_csv(os.path.join(args.results_dir, save_name))
+    final_df.to_csv(os.path.join(args.results_dir, save_name), index=False)
 
 # Generic training settings
 parser = argparse.ArgumentParser(description='Configurations for WSI Training')

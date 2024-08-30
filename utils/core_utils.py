@@ -8,6 +8,7 @@ from models.model_mil import MIL_fc, MIL_fc_mc
 # from models.model_dgcn import DeepGraphConv
 from models.model_clam import CLAM_MB, CLAM_SB
 # from models.model_cluster import MIL_Cluster_FC
+from models.model_transmil import TransMIL
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.metrics import auc as calc_auc
@@ -112,9 +113,9 @@ def train(datasets, cur, args):
 
     wandb.init(
         project="be_mil",
-        name=f"{args.exp_code}_{args.model_type}",
-        config={"dataset": args.task, "model": args.model_type, "seed": args.seed, "bag_loss": args.bag_loss, "inst_loss": args.inst_loss, "B": args.B, "subtyping": args.subtyping, "model_size": args.model_size, "drop_out": args.drop_out, "embed_dim": args.embed_dim, "weighted_sample": args.weighted_sample},
-        group=f"{args.model_type}",
+        name=f"{args.exp_code}_{args.model_type}_{cur}",
+        config={"dataset": args.task, "model": args.model_type, "seed": args.seed, "bag_loss": args.bag_loss, "inst_loss": args.inst_loss, "B": args.B, "subtyping": args.subtyping, "model_size": args.model_size, "drop_out": args.drop_out, "embed_dim": args.embed_dim, "weighted_sample": args.weighted_sample, "fold": cur},
+        group=f"{args.exp_code}_{args.model_type}",
         mode=mode
         )
 
@@ -165,7 +166,17 @@ def train(datasets, cur, args):
             model = CLAM_MB(**model_dict, instance_loss_fn=instance_loss_fn)
         else:
             raise NotImplementedError
-    
+    elif args.model_type == 'dsmil':
+        i_classifier = FCLayer(in_size=args.embed_dim, out_size=model_dict['n_classes'])
+        b_classifier = BClassifier(input_size=args.embed_dim, output_class=model_dict['n_classes'], dropout_v=0.0)
+        model = MILNet(i_classifier, b_classifier)
+    # elif args.model_type == 'dgcn':
+        # model_dict = {'embed_dim': args.embed_dim}
+        # model = DeepGraphConv(num_features=model_dict['embed_dim'], n_classes=args.n_classes)
+    # elif args.model_type == 'mi_fcn':
+        # model = MIL_Cluster_FC(embed_dim=args.embed_dim, n_classes=args.n_classes)
+    elif args.model_type == 'trans_mil':
+        model = TransMIL(args.embed_dim, n_classes = args.n_classes)
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
             model = MIL_fc_mc(**model_dict)
@@ -226,7 +237,7 @@ def train(datasets, cur, args):
 
         test_acc.update({f'test/test_class_{i}_acc': acc})
 
-    test_logs = {'test/val_error': val_error, 'test/val_auc': val_auc, 'test/test_error': test_error, 'test/test_auc': test_auc}
+    test_logs = {'fold': cur, 'test/val_error': val_error, 'test/val_auc': val_auc, 'test/test_error': test_error, 'test/test_auc': test_auc}
     test_logs.update(test_acc)
     wandb.log(test_logs)
 

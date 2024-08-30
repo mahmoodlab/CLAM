@@ -1,18 +1,11 @@
 from __future__ import print_function
 
-import numpy as np
-
 import argparse
 import torch
-import torch.nn as nn
-import pdb
 import os
 import pandas as pd
 from utils.utils import *
-from math import floor
-import matplotlib.pyplot as plt
-from dataset_modules.dataset_generic import Generic_WSI_Classification_Dataset, Generic_MIL_Dataset, save_splits
-import h5py
+from dataset_modules.dataset_generic import Generic_MIL_Dataset
 from utils.eval_utils import *
 
 # Training settings
@@ -30,7 +23,7 @@ parser.add_argument('--splits_dir', type=str, default=None,
                     help='splits directory, if using custom splits other than what matches the task (default: None)')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', 
                     help='size of model (default: small)')
-parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
+parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'dgcn', 'mi_fcn', 'dsmil', 'trans_mil'], default='clam_sb', 
                     help='type of model (default: clam_sb)')
 parser.add_argument('--k', type=int, default=10, help='number of folds (default: 10)')
 parser.add_argument('--k_start', type=int, default=-1, help='start fold (default: -1, last fold)')
@@ -59,7 +52,7 @@ assert os.path.isdir(args.splits_dir)
 
 settings = {'task': args.task,
             'split': args.split,
-            'save_dir': args.save_dir, 
+            'save_dir': args.save_dir,
             'models_dir': args.models_dir,
             'model_type': args.model_type,
             'drop_out': args.drop_out,
@@ -90,16 +83,16 @@ elif args.task == 'task_2_tumor_subtyping':
                             patient_strat= False,
                             ignore=[])
 
-# elif args.task == 'tcga_kidney_cv':
-#     args.n_classes=3
-#     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tcga_kidney_clean.csv',
-#                             data_dir= os.path.join(args.data_root_dir, 'tcga_kidney_20x_features'),
-#                             shuffle = False, 
-#                             print_info = True,
-#                             label_dict = {'TCGA-KICH':0, 'TCGA-KIRC':1, 'TCGA-KIRP':2},
-#                             patient_strat= False,
-#                             ignore=['TCGA-SARC'])
-
+elif args.task == 'be':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/best2/best2_adequate_samples.csv',
+                            data_dir= args.data_root_dir,
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            patient_strat=False,
+                            ignore=[])
+    
 else:
     raise NotImplementedError
 
