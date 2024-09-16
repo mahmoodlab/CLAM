@@ -15,18 +15,18 @@ from utils.file_utils import save_hdf5
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-def compute_w_loader(output_path, loader, model, verbose = 0):
+def compute_w_loader(output_path, loader, model, silent=False):
 	"""
 	args:
 		output_path: directory to save computed features (.h5 file)
 		model: pytorch model
-		verbose: level of feedback
+		silent: quiet outputs for tqdm
 	"""
-	if verbose > 0:
+	if not silent:
 		print(f'processing a total of {len(loader)} batches'.format(len(loader)))
 
 	mode = 'w'
-	for count, data in enumerate(tqdm(loader)):
+	for count, data in enumerate(tqdm(loader, disable=silent)):
 		with torch.inference_mode():	
 			batch = data['img']
 			coords = data['coord'].numpy().astype(np.int32)
@@ -52,6 +52,7 @@ parser.add_argument('--model_name', type=str, default='resnet50_trunc', choices=
 parser.add_argument('--batch_size', type=int, default=256)
 parser.add_argument('--no_auto_skip', default=False, action='store_true')
 parser.add_argument('--target_patch_size', type=int, default=224)
+parser.add_argument('--silent', default=False, action='store_true')
 args = parser.parse_args()
 
 
@@ -76,7 +77,7 @@ if __name__ == '__main__':
 
 	loader_kwargs = {'num_workers': 8, 'pin_memory': True} if device.type == "cuda" else {}
 
-	for bag_candidate_idx in tqdm(range(total)):
+	for bag_candidate_idx in tqdm(range(total), disable=args.silent):
 		slide_id = bags_dataset[bag_candidate_idx].split(args.slide_ext)[0]
 		bag_name = slide_id+'.h5'
 		h5_file_path = os.path.join(args.data_h5_dir, 'patches', bag_name)
@@ -96,7 +97,7 @@ if __name__ == '__main__':
 									 img_transforms=img_transforms)
 
 		loader = DataLoader(dataset=dataset, batch_size=args.batch_size, **loader_kwargs)
-		output_file_path = compute_w_loader(output_path, loader = loader, model = model, verbose = 1)
+		output_file_path = compute_w_loader(output_path, loader = loader, model = model, silent=args.silent)
 
 		time_elapsed = time.time() - time_start
 		print('\ncomputing features for {} took {} s'.format(output_file_path, time_elapsed))
