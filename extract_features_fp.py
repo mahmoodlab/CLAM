@@ -1,23 +1,17 @@
-import time
-import os
 import argparse
-import pdb
-from functools import partial
+import os
+import time
 
-import torch
-import torch.nn as nn
-import timm
-from torch.utils.data import DataLoader
-from PIL import Image
 import h5py
+import numpy as np
 import openslide
+import torch
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-import numpy as np
-
-from utils.file_utils import save_hdf5
 from dataset_modules.dataset_h5 import Dataset_All_Bags, Whole_Slide_Bag_FP
 from models import get_encoder
+from utils.file_utils import save_hdf5
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -54,7 +48,7 @@ parser.add_argument('--data_slide_dir', type=str, default=None)
 parser.add_argument('--slide_ext', type=str, default= '.svs')
 parser.add_argument('--csv_path', type=str, default=None)
 parser.add_argument('--feat_dir', type=str, default=None)
-parser.add_argument('--model_name', type=str, default='resnet50_trunc', choices=['resnet50_trunc', 'uni_v1', 'conch_v1'])
+parser.add_argument('--model_name', type=str, default='resnet50_trunc', choices=['resnet50_trunc', 'uni_v1', 'conch_v1', 'virchow_v2'])
 parser.add_argument('--batch_size', type=int, default=256)
 parser.add_argument('--no_auto_skip', default=False, action='store_true')
 parser.add_argument('--target_patch_size', type=int, default=224)
@@ -115,6 +109,3 @@ if __name__ == '__main__':
 		features = torch.from_numpy(features)
 		bag_base, _ = os.path.splitext(bag_name)
 		torch.save(features, os.path.join(args.feat_dir, 'pt_files', bag_base+'.pt'))
-
-
-

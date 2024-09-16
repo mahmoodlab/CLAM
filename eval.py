@@ -4,9 +4,11 @@ import argparse
 import torch
 import os
 import pandas as pd
+import wandb
 from utils.utils import *
 from dataset_modules.dataset_generic import Generic_MIL_Dataset
 from utils.eval_utils import *
+from sklearn.metrics import confusion_matrix
 
 # Training settings
 parser = argparse.ArgumentParser(description='CLAM Evaluation Script')
@@ -32,7 +34,8 @@ parser.add_argument('--fold', type=int, default=-1, help='single fold to evaluat
 parser.add_argument('--micro_average', action='store_true', default=False, 
                     help='use micro_average instead of macro_avearge for multiclass AUC')
 parser.add_argument('--split', type=str, choices=['train', 'val', 'test', 'all'], default='test')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping'])
+parser.add_argument('--log_data', action='store_true', default=False, help='log data using wandb')
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', 'best4_pilot_be'])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--embed_dim', type=int, default=1024)
 args = parser.parse_args()
@@ -83,13 +86,13 @@ elif args.task == 'task_2_tumor_subtyping':
                             patient_strat= False,
                             ignore=[])
 
-elif args.task == 'be':
+elif args.task == 'best4_pilot_be':
     args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/best2/best2_adequate_samples.csv',
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/best4/pilot/he_be_slides.csv',
                             data_dir= args.data_root_dir,
                             shuffle = False, 
-                            seed = args.seed, 
                             print_info = True,
+                            label_dict = {'N':0, 'E':0, 'Y':1},
                             patient_strat=False,
                             ignore=[])
     
@@ -117,21 +120,51 @@ if __name__ == "__main__":
     all_auc = []
     all_acc = []
     for ckpt_idx in range(len(ckpt_paths)):
+        if args.log_data:
+            mode = 'online'
+        else:
+            mode = 'disabled'
+
+        wandb.init(
+            project="be_mil",
+            name=f"{args.save_exp_code}_{args.model_type}_{ckpt_idx}",
+            config={"dataset": args.task, "model": args.model_type},
+            group=f"{args.save_exp_code}_{args.model_type}",
+            mode=mode,
+            resume='allow'
+            )
+        
         if datasets_id[args.split] < 0:
             split_dataset = dataset
         else:
             csv_path = '{}/splits_{}.csv'.format(args.splits_dir, folds[ckpt_idx])
             datasets = dataset.return_splits(from_id=False, csv_path=csv_path)
             split_dataset = datasets[datasets_id[args.split]]
+            writer = None
+
         model, patient_results, test_error, auc, df  = eval(split_dataset, args, ckpt_paths[ckpt_idx])
         all_results.append(all_results)
         all_auc.append(auc)
         all_acc.append(1-test_error)
         df.to_csv(os.path.join(args.save_dir, 'fold_{}.csv'.format(folds[ckpt_idx])), index=False)
+        
+        tn, fp, fn, tp = confusion_matrix(df['Y'], df['Y_hat']).ravel()
+        sensitivity = tp/(tp+fn)
+        specificity = tn/(tn+fp)
+
+        # Log metrics to wandb
+        wandb.log({
+            f'{args.task}': folds[ckpt_idx],
+            f'{args.task}/auc': auc,
+            f'{args.task}/acc': 1-test_error,
+            f'{args.task}/sensitivity': sensitivity,
+            f'{args.task}/specificity': specificity
+        })
+        wandb.finish()
 
     final_df = pd.DataFrame({'folds': folds, 'test_auc': all_auc, 'test_acc': all_acc})
     if len(folds) != args.k:
         save_name = 'summary_partial_{}_{}.csv'.format(folds[0], folds[-1])
     else:
         save_name = 'summary.csv'
-    final_df.to_csv(os.path.join(args.save_dir, save_name))
+    final_df.to_csv(os.path.join(args.save_dir, save_name), index=False)

@@ -78,7 +78,7 @@ parser.add_argument('--results_dir', default='./results', help='results director
 parser.add_argument('--split_dir', type=str, default=None, 
                     help='manually specify the set of splits to use, ' 
                     +'instead of infering from the task and label_frac argument (default: None)')
-parser.add_argument('--log_data', action='store_true', default=False, help='log data using tensorboard')
+parser.add_argument('--log_data', action='store_true', default=False, help='log data using wandb')
 parser.add_argument('--testing', action='store_true', default=False, help='debugging tool')
 parser.add_argument('--early_stopping', action='store_true', default=False, help='enable early stopping')
 parser.add_argument('--opt', type=str, choices = ['adam', 'sgd'], default='adam')
@@ -173,9 +173,9 @@ elif args.task == 'task_3_esophagus_tumor_grade':
                             seed = args.seed, 
                             print_info = True,
                             label_dict = {'normal': 0, 'NDBE': 0,
-                                            'GM': 1,
-                                            'LGD': 2,
-                                            'HGD': 3, 'ID': 3, 'IMC': 3
+                                        'GM': 1,
+                                        'LGD': 2,
+                                        'HGD': 3, 'ID': 3, 'IMC': 3
                                         },
                             patient_strat= False,
                             ignore=['(no slide submitted)'])

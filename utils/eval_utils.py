@@ -13,7 +13,6 @@ from utils.utils import *
 from utils.core_utils import Accuracy_Logger
 from sklearn.metrics import roc_auc_score, roc_curve, auc
 from sklearn.preprocessing import label_binarize
-import matplotlib.pyplot as plt
 
 def initiate_model(args, ckpt_path, device='cuda'):
     print('Init Model')    
