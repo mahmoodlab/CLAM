@@ -44,7 +44,7 @@ def get_encoder(model_name, target_img_size=224):
         HAS_UNI, UNI_CKPT_PATH = has_UNI()
         assert HAS_UNI, 'UNI is not available'
         model = timm.create_model("vit_large_patch16_224",
-                            init_values=1e-5, 
+                            init_values=1e-5,
                             num_classes=0)
                             #dynamic_img_size=True) #older version of timms
         model.load_state_dict(torch.load(UNI_CKPT_PATH, map_location="cpu"), strict=True)

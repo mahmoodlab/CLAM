@@ -237,12 +237,12 @@ def train(datasets, cur, args):
 
         test_acc.update({f'test/test_class_{i}_acc': acc})
 
-    test_logs = {'fold': cur, 'test/val_error': val_error, 'test/val_auc': val_auc, 'test/test_error': test_error, 'test/test_auc': test_auc}
+    test_logs = {'test/val_error': val_error, 'test/val_auc': val_auc, 'test/test_error': test_error, 'test/test_auc': test_auc}
     test_logs.update(test_acc)
     wandb.log(test_logs)
 
     wandb.finish()
-    return results_dict, test_auc, val_auc, 1-test_error, 1-val_error 
+    return results_dict, test_auc, val_auc, 1-test_error, 1-val_error
 
 
 def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writer = None, loss_fn = None):

@@ -118,9 +118,8 @@ if __name__ == '__main__':
     print('patch_size: {} x {}, with {:.2f} overlap, step size is {} x {}'.format(patch_size[0], patch_size[1], patch_args.overlap, step_size[0], step_size[1]))
 
     preset = data_args.preset
-    def_seg_params = {'seg_level': -1, 'sthresh': 15, 'mthresh': 11, 'close': 2, 'use_otsu': False, 
-                      'keep_ids': 'none', 'exclude_ids':'none'}
-    def_filter_params = {'a_t':50.0, 'a_h': 8.0, 'max_n_holes':10}
+    def_seg_params = {'seg_level': -1, 'based_on': 'hed', 'contrast': 1, 'keep_ids': None, 'exclude_ids':None}
+    def_filter_params = {'min_pixel_count':25, 'a_t':20, 'a_h': 16, 'max_n_holes':2, 'max_dist':250}
     def_vis_params = {'vis_level': -1, 'line_thickness': 250}
     def_patch_params = {'use_padding': True, 'contour_fn': 'four_pt'}
 
@@ -150,7 +149,7 @@ if __name__ == '__main__':
         df = initialize_df(slides, def_seg_params, def_filter_params, def_vis_params, def_patch_params, use_heatmap_args=False)
         
     else:
-        df = pd.read_csv(os.path.join('heatmaps/process_lists', data_args.process_list))
+        df = pd.read_csv(data_args.process_list)
         df = initialize_df(df, def_seg_params, def_filter_params, def_vis_params, def_patch_params, use_heatmap_args=False)
 
     mask = df['process'] == 1
@@ -178,7 +177,6 @@ if __name__ == '__main__':
     class_encodings = list(label_dict.values())
     reverse_label_dict = {class_encodings[i]: class_labels[i] for i in range(len(class_labels))} 
     
-
     os.makedirs(exp_args.production_save_dir, exist_ok=True)
     os.makedirs(exp_args.raw_save_dir, exist_ok=True)
     blocky_wsi_kwargs = {'top_left': None, 'bot_right': None, 'patch_size': patch_size, 'step_size': patch_size, 
@@ -188,7 +186,7 @@ if __name__ == '__main__':
         slide_name = process_stack.loc[i, 'slide_id']
         if data_args.slide_ext not in slide_name:
             slide_name+=data_args.slide_ext
-        print('\nprocessing: ', slide_name)	
+        print('\nprocessing: ', slide_name)
 
         try:
             label = process_stack.loc[i, 'label']
@@ -198,14 +196,14 @@ if __name__ == '__main__':
         slide_id = slide_name.replace(data_args.slide_ext, '')
 
         if not isinstance(label, str):
-            grouping = reverse_label_dict[label]
+            grouping = label_dict[str(label)]
         else:
             grouping = label
 
         p_slide_save_dir = os.path.join(exp_args.production_save_dir, exp_args.save_exp_code, str(grouping))
         os.makedirs(p_slide_save_dir, exist_ok=True)
 
-        r_slide_save_dir = os.path.join(exp_args.raw_save_dir, exp_args.save_exp_code, str(grouping),  slide_id)
+        r_slide_save_dir = os.path.join(exp_args.raw_save_dir, exp_args.save_exp_code, str(grouping), slide_id)
         os.makedirs(r_slide_save_dir, exist_ok=True)
 
         if heatmap_args.use_roi:
@@ -279,10 +277,9 @@ if __name__ == '__main__':
         
         features_path = os.path.join(r_slide_save_dir, slide_id+'.pt')
         h5_path = os.path.join(r_slide_save_dir, slide_id+'.h5')
-    
 
         ##### check if h5_features_file exists ######
-        if not os.path.isfile(h5_path) :
+        if not os.path.isfile(h5_path):
             _, _, wsi_object = compute_from_patches(wsi_object=wsi_object, 
                                             model=model, 
                                             feature_extractor=feature_extractor, 
@@ -319,10 +316,10 @@ if __name__ == '__main__':
             process_stack.loc[i, 'p_{}'.format(c)] = Y_probs[c]
 
         os.makedirs('heatmaps/results/', exist_ok=True)
-        if data_args.process_list is not None:
-            process_stack.to_csv('heatmaps/results/{}.csv'.format(data_args.process_list.replace('.csv', '')), index=False)
-        else:
-            process_stack.to_csv('heatmaps/results/{}.csv'.format(exp_args.save_exp_code), index=False)
+        # if data_args.process_list is not None:
+            # process_stack.to_csv('heatmaps/results/{}.csv'.format(data_args.process_list.replace('.csv', '')), index=False)
+        # else:
+        process_stack.to_csv('heatmaps/results/{}.csv'.format(exp_args.save_exp_code), index=False)
         
         file = h5py.File(block_map_save_path, 'r')
         dset = file['attention_scores']
