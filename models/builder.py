@@ -44,9 +44,9 @@ def get_encoder(model_name, target_img_size=224):
         HAS_UNI, UNI_CKPT_PATH = has_UNI()
         assert HAS_UNI, 'UNI is not available'
         model = timm.create_model("vit_large_patch16_224",
-                            init_values=1e-5, 
-                            num_classes=0, 
-                            dynamic_img_size=True)
+                            init_values=1e-5,
+                            num_classes=0)
+                            #dynamic_img_size=True) #older version of timms
         model.load_state_dict(torch.load(UNI_CKPT_PATH, map_location="cpu"), strict=True)
     elif model_name == 'conch_v1':
         HAS_CONCH, CONCH_CKPT_PATH = has_CONCH()
@@ -54,6 +54,9 @@ def get_encoder(model_name, target_img_size=224):
         from conch.open_clip_custom import create_model_from_pretrained
         model, _ = create_model_from_pretrained("conch_ViT-B-16", CONCH_CKPT_PATH)
         model.forward = partial(model.encode_image, proj_contrast=False, normalize=False)
+    elif model_name == 'virchow_v2':
+        from timm.layers import SwiGLUPacked
+        model = timm.create_model("hf-hub:paige-ai/Virchow2", pretrained=True, mlp_layer=SwiGLUPacked, act_layer=torch.nn.SiLU)
     else:
         raise NotImplementedError('model {} not implemented'.format(model_name))
     

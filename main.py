@@ -1,23 +1,17 @@
-from __future__ import print_function
-
 import argparse
-import pdb
 import os
-import math
 
+import numpy as np
+import pandas as pd
+# pytorch imports
+import torch
+
+from dataset_modules.dataset_generic import Generic_MIL_Dataset
+from utils.core_utils import train
 # internal imports
 from utils.file_utils import save_pkl
 from utils.utils import *
-from utils.core_utils import train
-from dataset_modules.dataset_generic import Generic_MIL_Dataset
 
-# pytorch imports
-import torch
-import torch.nn.functional as F
-
-import pandas as pd
-import numpy as np
-import wandb
 
 def main(args):
     # create results directory if necessary
@@ -40,13 +34,6 @@ def main(args):
     folds = np.arange(start, end)
     for i in folds:
         seed_torch(args.seed)
-
-        wandb.init(
-            project="Path_pred_UNI_feats_no_geno",
-            name=f"fold_{i}_{args.seed}_new",
-            config={"dataset": "just_images_UNI_feats"}
-        )
-
         train_dataset, val_dataset, test_dataset = dataset.return_splits(from_id=False, 
                 csv_path='{}/splits_{}.csv'.format(args.split_dir, i))
         
@@ -67,7 +54,7 @@ def main(args):
         save_name = 'summary_partial_{}_{}.csv'.format(start, end)
     else:
         save_name = 'summary.csv'
-    final_df.to_csv(os.path.join(args.results_dir, save_name))
+    final_df.to_csv(os.path.join(args.results_dir, save_name), index=False)
 
 # Generic training settings
 parser = argparse.ArgumentParser(description='Configurations for WSI Training')
@@ -91,19 +78,19 @@ parser.add_argument('--results_dir', default='./results', help='results director
 parser.add_argument('--split_dir', type=str, default=None, 
                     help='manually specify the set of splits to use, ' 
                     +'instead of infering from the task and label_frac argument (default: None)')
-parser.add_argument('--log_data', action='store_true', default=False, help='log data using tensorboard')
+parser.add_argument('--log_data', action='store_true', default=False, help='log data using wandb')
 parser.add_argument('--testing', action='store_true', default=False, help='debugging tool')
 parser.add_argument('--early_stopping', action='store_true', default=False, help='enable early stopping')
 parser.add_argument('--opt', type=str, choices = ['adam', 'sgd'], default='adam')
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout')
 parser.add_argument('--bag_loss', type=str, choices=['svm', 'ce'], default='ce',
                      help='slide-level classification loss function (default: ce)')
-parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
+parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'dgcn', 'mi_fcn', 'dsmil', 'trans_mil'], default='clam_sb', 
                     help='type of model (default: clam_sb, clam w/ single attention branch)')
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', 'task_3_esophagus_tumor_grade'])
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping', 'task_3_esophagus_tumor_grade', 'be', 'atypia'])
 ### CLAM specific options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
                      help='disable instance-level clustering')
@@ -181,34 +168,47 @@ elif args.task == 'task_2_tumor_subtyping':
 elif args.task == 'task_3_esophagus_tumor_grade':
     args.n_classes=4
     dataset = Generic_MIL_Dataset(csv_path = '/mnt/scratchc/fmlab/zuberi01/slide_matching.csv',
-                            #data_dir= os.path.join(args.data_root_dir, 'tumor_subtyping_resnet_features'),
                             data_dir = "/mnt/scratchc/fmlab/zuberi01/saved_patches/40x_400/features2",
                             shuffle = False, 
                             seed = args.seed, 
                             print_info = True,
                             label_dict = {'normal': 0, 'NDBE': 0,
-                                            'GM': 1,
-                                            'LGD': 2,
-                                            'HGD': 3, 'ID': 3, 'IMC': 3
+                                        'GM': 1,
+                                        'LGD': 2,
+                                        'HGD': 3, 'ID': 3, 'IMC': 3
                                         },
-                            #label_dict = {'normal': 0, 'NDBE': 0,
-                            #                'GM': 1,
-                            #                'LGD': 2, 'ID': 2,
-                            #                'HGD': 3, 'IMC': 3
-                            #            },
                             patient_strat= False,
                             ignore=['(no slide submitted)'])
 
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
-        
+elif args.task == 'be':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/delta/be_he_adequate.csv',
+                            data_dir= args.data_root_dir,
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'N':0, 'Y':1},
+                            patient_strat=False,
+                            ignore=[])
+elif args.task == 'atypia':
+    args.n_classes=2
+    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/adequate_samples.csv',
+                            data_dir= args.data_root_dir,
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'N':0, 'Y':1},
+                            patient_strat=False,
+                            ignore=[])
 else:
     raise NotImplementedError
     
 if not os.path.isdir(args.results_dir):
     os.mkdir(args.results_dir)
 
-args.results_dir = os.path.join(args.results_dir, str(args.exp_code) + '_s{}'.format(args.seed))
+args.results_dir = os.path.join(args.results_dir, f'{args.exp_code}_{args.model_type}')
 if not os.path.isdir(args.results_dir):
     os.mkdir(args.results_dir)
 

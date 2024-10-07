@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-import pdb
 
 """
 Attention Network without Gating (2 fc layers)

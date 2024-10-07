@@ -12,7 +12,7 @@ parser.add_argument('--seed', type=int, default=1,
                     help='random seed (default: 1)')
 parser.add_argument('--k', type=int, default=10,
                     help='number of splits (default: 10)')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal', 'task_2_tumor_subtyping', 'task_3_esophagus_tumor_grade'],)
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal', 'task_2_tumor_subtyping', 'task_3_esophagus_tumor_grade', 'atypia', 'be'])
 parser.add_argument('--val_frac', type=float, default= 0.1,
                     help='fraction of labels for validation (default: 0.1)')
 parser.add_argument('--test_frac', type=float, default= 0.1,
@@ -54,7 +54,24 @@ elif args.task == 'task_3_esophagus_tumor_grade':
                             patient_strat= True,
                             #patient_voting='maj',
                             ignore=[])
-
+elif args.task == 'atypia':
+    args.n_classes=2
+    dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/delta_atypia.csv',
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'N':0, 'Y':1},
+                            patient_strat=True,
+                            ignore=[])
+elif args.task == 'be':
+    args.n_classes=2
+    dataset = Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/delta/be_he_surveillance_adequate.csv',
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_dict = {'N':0, 'Y':1},
+                            patient_strat=True,
+                            ignore=[])
 else:
     raise NotImplementedError
 
@@ -69,9 +86,10 @@ if __name__ == '__main__':
         label_fracs = [0.1, 0.25, 0.5, 0.75, 1.0]
     
     for lf in label_fracs:
-        split_dir = '/mnt/scratchc/fmlab/zuberi01/CLAM/splits/'+ str(args.task) + '_{}'.format(int(lf * 100))
+        split_dir = 'splits/'+ str(args.task) + '_{}'.format(int(lf * 100))
         os.makedirs(split_dir, exist_ok=True)
-        dataset.create_splits(k = args.k, val_num = val_num, test_num = test_num, label_frac=lf)
+        test = dataset.slide_data[dataset.slide_data['split'] == 'test'].index
+        dataset.create_splits(k = args.k, val_num = val_num, test_num = test_num, label_frac=lf, custom_test_ids=test)
         for i in range(args.k):
             dataset.set_splits()
             descriptor_df = dataset.test_split_gen(return_descriptor=True)

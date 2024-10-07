@@ -43,7 +43,6 @@ def initialize_df(slides, seg_params, filter_params, vis_params, patch_params,
 		'a_h': np.full((total), int(filter_params['a_h']), dtype=np.float32),
 		'max_n_holes': np.full((total), int(filter_params['max_n_holes']), dtype=np.uint32),
 		'max_dist': np.full((total), int(filter_params['max_dist']), dtype=np.uint32),
-		'max_bboxes': np.full((total), int(filter_params['max_bboxes']), dtype=np.uint32),
 
 		# vis params
 		'vis_level': np.full((total), int(vis_params['vis_level']), dtype=np.int8),

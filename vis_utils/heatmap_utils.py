@@ -23,7 +23,7 @@ from tqdm import tqdm
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def score2percentile(score, ref):
-    percentile = percentileofscore(ref, score)
+    percentile = percentileofscore(ref.squeeze(), score.squeeze())
     return percentile
 
 def drawHeatmap(scores, coords, slide_path=None, wsi_object=None, vis_level = -1, **kwargs):
@@ -52,7 +52,7 @@ def compute_from_patches(wsi_object, img_transforms, feature_extractor=None, cla
     attn_save_path=None, ref_scores=None, feat_save_path=None, **wsi_kwargs):    
     top_left = wsi_kwargs['top_left']
     bot_right = wsi_kwargs['bot_right']
-    patch_size = wsi_kwargs['patch_size'] 
+    patch_size = wsi_kwargs['patch_size']
     
     roi_dataset = Wsi_Region(wsi_object, t=img_transforms, **wsi_kwargs)
     roi_loader = get_simple_loader(roi_dataset, batch_size=batch_size, num_workers=8)
@@ -74,7 +74,7 @@ def compute_from_patches(wsi_object, img_transforms, feature_extractor=None, cla
                     A = A[clam_pred]
 
                 A = A.view(-1, 1).cpu().numpy()
-
+                
                 if ref_scores is not None:
                     for score_idx in range(len(A)):
                         A[score_idx] = score2percentile(A[score_idx], ref_scores)
