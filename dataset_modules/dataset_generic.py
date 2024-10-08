@@ -318,13 +318,14 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 		super(Generic_MIL_Dataset, self).__init__(**kwargs)
 		self.data_dir = data_dir
 		self.use_h5 = False
+		self.label_col_name = 'label'
 
 	def load_from_h5(self, toggle):
 		self.use_h5 = toggle
 
 	def __getitem__(self, idx):
 		slide_id = self.slide_data['slide_id'][idx]
-		label = self.slide_data['label'][idx]
+		label = self.slide_data[self.label_col_name][idx]
 		if type(self.data_dir) == dict:
 			source = self.slide_data['source'][idx]
 			data_dir = self.data_dir[source]

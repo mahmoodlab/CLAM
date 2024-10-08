@@ -112,7 +112,7 @@ def train(datasets, cur, args):
         mode = 'disabled'
 
     wandb.init(
-        project="be_mil",
+        project="be_early_fusion",
         name=f"{args.exp_code}_{args.model_type}_{cur}",
         config={"dataset": args.task, "model": args.model_type, "seed": args.seed, "bag_loss": args.bag_loss, "inst_loss": args.inst_loss, "B": args.B, "subtyping": args.subtyping, "model_size": args.model_size, "drop_out": args.drop_out, "embed_dim": args.embed_dim, "weighted_sample": args.weighted_sample, "fold": cur},
         group=f"{args.exp_code}_{args.model_type}",

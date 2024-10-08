@@ -101,6 +101,11 @@ parser.add_argument('--subtyping', action='store_true', default=False,
 parser.add_argument('--bag_weight', type=float, default=0.7,
                     help='clam: weight coefficient for bag-level loss (default: 0.7)')
 parser.add_argument('--B', type=int, default=8, help='numbr of positive/negative patches to sample for clam')
+parser.add_argument('--col_name', type=str, default='label', help='name of the column in the csv file that contains the labels') # add col name argument
+parser.add_argument('--pt_files_name', type=str, default='pt_files', help='name of the pt files') # add pt_files_name argument
+
+
+
 args = parser.parse_args()
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -182,6 +187,23 @@ elif args.task == 'task_3_esophagus_tumor_grade':
 
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
+
+elif args.task == 'task_4_progressor_or_not':
+    args.n_classes=4
+    dataset = Generic_MIL_Dataset(csv_path = '/mnt/scratchc/fmlab/zuberi01/slide_matching.csv',
+                            data_dir= args.data_root_dir,
+                            shuffle = False, 
+                            seed = args.seed, 
+                            print_info = True,
+                            label_col_name = 'progressor',
+                            label_dict = {'NP:',0,
+                                          'P:',1},
+                            patient_strat= False,
+                            ignore=['(no slide submitted)'])
+
+    if args.model_type in ['clam_sb', 'clam_mb']:
+        assert args.subtyping 
+
 elif args.task == 'be':
     args.n_classes=2
     dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/delta/be_he_adequate.csv',
