@@ -37,12 +37,12 @@ def patching(WSI_object, **kwargs):
 	start_time = time.time()
 
 	# Patch
-	file_path = WSI_object.process_contours(**kwargs)
+	file_path, attr_dict = WSI_object.process_contours(**kwargs)
 
 
 	### Stop Patch Timer
 	patch_time_elapsed = time.time() - start_time
-	return file_path, patch_time_elapsed
+	return file_path, patch_time_elapsed, attr_dict
 
 
 def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_dir, 
@@ -52,7 +52,8 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 				  filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8}, 
 				  vis_params = {'vis_level': -1, 'line_thickness': 500},
 				  patch_params = {'use_padding': True, 'contour_fn': 'four_pt'},
-				  patch_level = 0,
+				  magnification = None,
+				  patch_level = 0, custom_downsample = 1,
 				  use_default_params = False, 
 				  seg = False, save_mask = True, 
 				  stitch= False, 
@@ -195,9 +196,23 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
 		patch_time_elapsed = -1 # Default time
 		if patch:
-			current_patch_params.update({'patch_level': patch_level, 'patch_size': patch_size, 'step_size': step_size, 
+			if magnification:
+				if WSI_object.max_objective_magnification is None:
+					df.loc[idx, 'status'] = 'WSI do not has the attribute of objective magnification.'
+					print('WSI do not has the attribute of objective magnification.')
+					continue
+				patch_level, custom_downsample = WSI_object.getPatchLevel(magnification)
+				if isinstance(patch_level, dict):
+					df.loc[idx, 'status'] = patch_level['error']
+					print(patch_level['error'])
+					continue
+			current_patch_params.update({'patch_level': patch_level, 'patch_size': patch_size,
+										 'step_size': step_size, 'custom_downsample': custom_downsample,
 										 'save_path': patch_save_dir})
-			file_path, patch_time_elapsed = patching(WSI_object = WSI_object,  **current_patch_params,)
+			file_path, patch_time_elapsed, attr_dict = patching(WSI_object = WSI_object,  **current_patch_params)
+			print(attr_dict)
+			for key in ['patch_level', 'target_patch_size', 'target_step_size','patch_size', 'step_size', 'custom_downsample']:
+				df.loc[i, key] = attr_dict[key]
 		
 		stitch_time_elapsed = -1
 		if stitch:
@@ -242,6 +257,8 @@ parser.add_argument('--save_dir', type = str,
 					help='directory to save processed data')
 parser.add_argument('--preset', default=None, type=str,
 					help='predefined profile of default segmentation and filter parameters (.csv)')
+parser.add_argument('--magnification', type=int, default=None, 
+					help='objective magnification at which to patch. When it is not None, the patch_level does not work.')
 parser.add_argument('--patch_level', type=int, default=0, 
 					help='downsample level at which to patch')
 parser.add_argument('--process_list',  type = str, default=None,
@@ -306,6 +323,6 @@ if __name__ == '__main__':
 	seg_times, patch_times = seg_and_patch(**directories, **parameters,
 											patch_size = args.patch_size, step_size=args.step_size, 
 											seg = args.seg,  use_default_params=False, save_mask = True, 
-											stitch= args.stitch,
+											stitch= args.stitch, magnification = args.magnification,
 											patch_level=args.patch_level, patch = args.patch,
 											process_list = process_list, auto_skip=args.no_auto_skip)
