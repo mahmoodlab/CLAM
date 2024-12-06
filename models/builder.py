@@ -55,7 +55,10 @@ def get_encoder(model_name, target_img_size=224):
         model, _ = create_model_from_pretrained("conch_ViT-B-16", CONCH_CKPT_PATH)
         model.forward = partial(model.encode_image, proj_contrast=False, normalize=False)
     elif model_name == 'conch_v1_5':
-        from transformers import AutoModel
+        try:
+            from transformers import AutoModel
+        except ImportError:
+            raise ImportError("Please install huggingface transformers (e.g. 'pip install transformers') to use CONCH v1.5")
         titan = AutoModel.from_pretrained('MahmoodLab/TITAN', trust_remote_code=True)
         model, _ = titan.return_conch()
         assert target_img_size == 448, 'TITAN is used with 448x448 CONCH v1.5 features'
