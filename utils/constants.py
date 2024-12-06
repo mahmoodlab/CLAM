@@ -17,5 +17,10 @@ MODEL2CONSTANTS = {
 	{
 		"mean": OPENAI_MEAN,
 		"std": OPENAI_STD
+	},
+    "conch_v1_5":
+    {
+		"mean": IMAGENET_MEAN,
+		"std": IMAGENET_STD
 	}
 }
