@@ -1,3 +1,4 @@
+import glob
 import time
 import os
 import argparse
@@ -5,6 +6,14 @@ import pdb
 from functools import partial
 
 import torch
+
+if torch.cuda.is_available():
+    print("CUDA is available!")
+    device = torch.device("cuda")
+    print(f"Using device: {device}")
+else:
+    print("CUDA is not available.")
+    
 import torch.nn as nn
 import timm
 from torch.utils.data import DataLoader
@@ -20,7 +29,6 @@ from dataset_modules.dataset_h5 import Dataset_All_Bags, Whole_Slide_Bag_FP
 from models import get_encoder
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-
 def compute_w_loader(output_path, loader, model, verbose = 0):
 	"""
 	args:
@@ -81,12 +89,21 @@ if __name__ == '__main__':
 	total = len(bags_dataset)
 
 	loader_kwargs = {'num_workers': 8, 'pin_memory': True} if device.type == "cuda" else {}
-
+	print(csv_path)
 	for bag_candidate_idx in tqdm(range(total)):
+		print(bag_candidate_idx, args.slide_ext)
 		slide_id = bags_dataset[bag_candidate_idx].split(args.slide_ext)[0]
 		bag_name = slide_id+'.h5'
 		h5_file_path = os.path.join(args.data_h5_dir, 'patches', bag_name)
-		slide_file_path = os.path.join(args.data_slide_dir, slide_id+args.slide_ext)
+		slide_file_pattern = os.path.join(args.data_slide_dir, "*", slide_id + args.slide_ext)
+		slide_file_paths = glob.glob(slide_file_pattern)
+
+		if slide_file_paths:  # Check if any matching files were found
+			slide_file_path = slide_file_paths[0]  # Get the first matching path (if multiple exist)
+			print(f"Found file matching: {slide_file_path}")
+		else:
+			print(f"No file found matching {slide_id + args.slide_ext} in {args.data_slide_dir}")
+			# Handle the case where the file is not found (e.g., raise an exception)
 		print('\nprogress: {}/{}'.format(bag_candidate_idx, total))
 		print(slide_id)
 

@@ -61,7 +61,21 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
 
 	slides = sorted(os.listdir(source))
-	slides = [slide for slide in slides if os.path.isfile(os.path.join(source, slide))]
+	# slides = [slide for slide in slides if os.path.isfile(os.path.join(source, slide))]
+
+	all_files = []
+	for slide in slides:
+		slide_path = os.path.join(source, slide)
+		if os.path.isdir(slide_path):  # Check if it is a directory
+			# List all files in this directory
+			files_in_slide = [os.path.join(slide_path, file) for file in os.listdir(slide_path) 
+									if file.endswith(".svs") and os.path.isfile(os.path.join(slide_path, file))]			
+			all_files.extend(files_in_slide)  # Add files to the final list
+
+	slides = all_files
+	print(slides)
+	print('total slides: {}'.format(len(slides)))
+
 	if process_list is None:
 		df = initialize_df(slides, seg_params, filter_params, vis_params, patch_params)
 	
