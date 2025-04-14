@@ -32,6 +32,7 @@ class WholeSlideImage(object):
         self.wsi = openslide.open_slide(path)
         self.level_downsamples = self._assertLevelDownsamples()
         self.level_dim = self.wsi.level_dimensions
+        self.max_objective_magnification = self.getMaxObjectivteMagnification()
     
         self.contours_tissue = None
         self.contours_tumor = None
@@ -39,6 +40,42 @@ class WholeSlideImage(object):
 
     def getOpenSlide(self):
         return self.wsi
+    
+    def getMaxObjectivteMagnification(self):
+        if 'aperio.AppMag' in self.wsi.properties:
+            return int(self.wsi.properties['aperio.AppMag'])
+        elif 'openslide.mpp-x' in self.wsi.properties:
+            if abs(float(self.wsi.properties['openslide.mpp-x'])-0.25) < 0.1:
+                return 40
+            elif abs(float(self.wsi.properties['openslide.mpp-x'])-0.5) < 0.1:
+                return 20
+        elif 'tiff.XResolution' in self.wsi.properties:
+            # um per pixel
+            mpp = 1.0/(float(self.wsi.properties['tiff.XResolution'])/10000)
+            if abs(mpp-0.25) < 0.1:
+                return 40
+            elif abs(mpp-0.5) < 0.1:
+                return 20
+        return None
+    
+    def getPatchLevel(self,magnification):
+        if magnification > self.max_objective_magnification:
+            return {'error':'The specified magnification exceeds the maximum available magnification.'}, None
+        if self.max_objective_magnification % magnification != 0:
+            return {'error':'The specified magnification must be divisible by the maximum magnification.'}, None
+        scale = self.max_objective_magnification / magnification
+        patch_level, custom_downsample = None, None
+        for i, level_downsample in enumerate(self.level_downsamples):
+            downsample = int(level_downsample[0])
+            if downsample == scale:
+                patch_level = i
+                custom_downsample = 1
+            elif downsample>scale:
+                break
+        if not patch_level:
+            patch_level = 0
+            custom_downsample = scale
+        return patch_level, custom_downsample
 
     def initXML(self, xml_path):
         def _createContour(coord_list):
@@ -368,7 +405,9 @@ class WholeSlideImage(object):
         
         return level_downsamples
 
-    def process_contours(self, save_path, patch_level=0, patch_size=256, step_size=256, **kwargs):
+    def process_contours(self, save_path, patch_level=0, patch_size=256, step_size=256, custom_downsample=1, **kwargs):
+        target_patch_size, target_step_size = patch_size, step_size
+        patch_size, step_size = int(target_patch_size * custom_downsample), int(target_step_size * custom_downsample)
         save_path_hdf5 = os.path.join(save_path, str(self.name) + '.h5')
         print("Creating patches for: ", self.name, "...",)
         elapsed = time.time()
@@ -381,6 +420,11 @@ class WholeSlideImage(object):
                 print('Processing contour {}/{}'.format(idx, n_contours))
             
             asset_dict, attr_dict = self.process_contour(cont, self.holes_tissue[idx], patch_level, save_path, patch_size, step_size, **kwargs)
+            attr_dict['coords'].update({
+                'target_patch_size': target_patch_size,
+                'target_step_size': target_step_size,
+                'custom_downsample': custom_downsample
+            })
             if len(asset_dict) > 0:
                 if init:
                     save_hdf5(save_path_hdf5, asset_dict, attr_dict, mode='w')
@@ -388,7 +432,7 @@ class WholeSlideImage(object):
                 else:
                     save_hdf5(save_path_hdf5, asset_dict, mode='a')
 
-        return self.hdf5_file
+        return self.hdf5_file, attr_dict['coords']
 
 
     def process_contour(self, cont, contour_holes, patch_level, save_path, patch_size = 256, step_size = 256,
@@ -464,6 +508,7 @@ class WholeSlideImage(object):
             asset_dict = {'coords' :          results}
             
             attr = {'patch_size' :            patch_size, # To be considered...
+                    'step_size' :             step_size,
                     'patch_level' :           patch_level,
                     'downsample':             self.level_downsamples[patch_level],
                     'downsampled_level_dim' : tuple(np.array(self.level_dim[patch_level])),

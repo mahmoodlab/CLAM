@@ -64,6 +64,8 @@ class Whole_Slide_Bag_FP(Dataset):
 			dset = f['coords']
 			self.patch_level = f['coords'].attrs['patch_level']
 			self.patch_size = f['coords'].attrs['patch_size']
+			self.target_patch_size = f['coords'].attrs['target_patch_size']
+			self.custom_downsample = f['coords'].attrs['custom_downsample']
 			self.length = len(dset)
 			
 		self.summary()
@@ -84,7 +86,8 @@ class Whole_Slide_Bag_FP(Dataset):
 		with h5py.File(self.file_path,'r') as hdf5_file:
 			coord = hdf5_file['coords'][idx]
 		img = self.wsi.read_region(coord, self.patch_level, (self.patch_size, self.patch_size)).convert('RGB')
-
+		if self.custom_downsample > 1:
+			img = img.resize((self.target_patch_size, self.target_patch_size))
 		img = self.roi_transforms(img)
 		return {'img': img, 'coord': coord}
 
