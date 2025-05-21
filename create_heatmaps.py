@@ -33,6 +33,7 @@ args = parser.parse_args()
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def infer_single_slide(model, features, label, reverse_label_dict, k=1):
+    model.eval() # The model should be in eval mode to prevent dropout and batchnorm from being applied
     features = features.to(device)
     with torch.inference_mode():
         if isinstance(model, (CLAM_SB, CLAM_MB)):
