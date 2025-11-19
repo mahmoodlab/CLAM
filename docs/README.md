@@ -20,22 +20,38 @@ Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Imag
 * **04/06/2024**: [UNI](https://github.com/mahmoodlab/UNI) and [CONCH](https://github.com/mahmoodlab/CONCH) are now available to select as pretrained encoders. See [Using CONCH / UNI as Pretrained Encoders](#using-conch--uni-as-pretrained-encoders) for more details. Please make sure all dependencies are installed correctly by installing the latest **env.yml** file (see [Installation guide](INSTALLATION.md) for details), and using the corresponding **clam_latest** conda environment.
 * 03/19/2024: We are releasing [UNI](https://github.com/mahmoodlab/UNI) and [CONCH](https://github.com/mahmoodlab/CONCH), a pair of SOTA pretrained encoders that produce strong representations for histopathology images and enhance performance on various computational pathology workflows, including the MIL-based CLAM workflow. 
 * 05/24/2021: Script for heatmap visualization now available via **create_heatmaps.py**, with the configuration template located in **heatmaps/configs**. See [Heatmap visualization for demo and instructions.](#Heatmap-Visualization)
-* 03/01/2021: New, fast patching/feature extraction pipeline is now available. **TL;DR:** since CLAM only requires image features for training, it is not necessary to save the actual image patches, the new pipeline rids of this overhead and instead only saves the coordinates of image patches during "patching" and loads these regions on the fly from WSIs during feature extraction. This is significantly faster than the old pipeline and usually only takes 1-2s for "patching" and a couple minutes to featurize a WSI. To use the new pipeline, make sure you are calling **create_patches_fp.py** and **extract_features_fp.py** instead of the old **create_patches.py** and **extract_features.py** scripts.
+* 03/01/2021: New, fast patching/feature extraction pipeline is now available. 
+更新日志：
+2025 年 4 月 15 日：欢迎查看我们的新代码仓库 Trident，该仓库适用于全切片图像处理，支持 25 种以上的基础模型，包括 UNIv2、CONCH、TITAN 等！
+2024 年 4 月 6 日：UNI 和 CONCH 现已可选择作为预训练编码器。更多详情请参见《将 CONCH/UNI 用作预训练编码器》（Using CONCH / UNI as Pretrained Encoders）部分。请务必通过安装最新的 env.yml 文件（详情参见《安装指南》Installation guide）并使用对应的 clam_latest conda 环境，确保所有依赖项均已正确安装。
+2024 年 3 月 19 日：我们发布了 UNI 和 CONCH—— 这是一对性能最优（SOTA，State-of-the-Art）的预训练编码器，能为组织病理学图像生成高质量特征表示，并提升各类计算病理工作流程的性能，包括基于多实例学习（MIL，Multiple Instance Learning）的 CLAM 工作流程。
+2021 年 5 月 24 日：现已提供热力图可视化脚本，可通过 create_heatmaps.py 调用，配置模板位于 heatmaps/configs 目录下。演示及操作说明请参见《热力图可视化》（Heatmap Visualization）部分。
+2021 年 3 月 1 日：全新的快速切片 / 特征提取流水线现已上线。
+**TL;DR:** since CLAM only requires image features for training, it is not necessary to save the actual image patches, the new pipeline rids of this overhead and instead only saves the coordinates of image patches during "patching" and loads these regions on the fly from WSIs during feature extraction. This is significantly faster than the old pipeline and usually only takes 1-2s for "patching" and a couple minutes to featurize a WSI. To use the new pipeline, make sure you are calling **create_patches_fp.py** and **extract_features_fp.py** instead of the old **create_patches.py** and **extract_features.py** scripts.
+核心摘要（TL;DR，Too Long; Didn't Read）：由于 CLAM 模型训练仅需图像特征，无需保存实际图像切片；新流水线去除了这一冗余步骤，在 “切片” 过程中仅保存图像切片的坐标，并在特征提取时从全切片图像（WSI）中实时加载这些区域。该流水线比旧版本速度显著提升，“切片” 过程通常仅需 1-2 秒，全切片图像特征提取也仅需几分钟。若要使用新流水线，请确保调用 create_patches_fp.py 和 extract_features_fp.py 脚本，而非旧版本的 create_patches.py 和 extract_features.py。
 
 **Note**: while we hope that the newest update will require minimal changes to the user's workflow, if needed, you may reference the old version of the code base [here](https://github.com/mahmoodlab/CLAM/tree/deprecated). Please report any issues in the public forum. 
+注意：我们希望最新更新对用户的工作流程改动最小，但如需参考旧版本代码库，可访问此链接（here）。如有任何问题，请在公共论坛中反馈。
 
 **Warning**: the latest update will by default resize image patches to 224 x 224 before extracting features using the pretrained encoder. This change serves to make it more consistent with the evaluation protocol used in UNI, CONCH and other studies. If you wish to preserve the original size of the image patches generated during patching or use a different image size for feature extraction, you can do so by specifying `--target_patch_size` in **extract_features_fp.py**.
+警告：最新更新默认会在使用预训练编码器提取特征前，将图像切片（image patches）调整为 224×224 的尺寸。此改动旨在与 UNI、CONCH 及其他研究中采用的评估协议保持一致。若你希望保留 “切片生成”（patching）过程中产生的图像切片原始尺寸，或使用其他尺寸进行特征提取，可在extract_features_fp.py脚本中通过指定--target_patch_size参数实现。
 
 **RE update 03/01/21**: note that the README has been updated to use the new, faster pipeline by default. If you still wish to use the old pipeline, refer to: [Guide for Old Pipeline](README_old.md). It saves tissue patches, which is signficantly slower and takes up a lot of storage space but can still be useful if you need to work with original image patches instead of feature embeddings.
+关于 2021 年 3 月 1 日更新的补充说明：请注意，本 README 文档已更新，默认采用全新的快速处理流水线（pipeline）。若你仍需使用旧流水线，请参考《旧流水线使用指南》（Guide for Old Pipeline）。旧流水线会保存组织切片（tissue patches），其速度显著较慢且占用大量存储空间，但当你需要使用原始图像切片而非特征嵌入（feature embeddings）时，该流水线仍具备实用价值。
 
 ## Installation:
 Please refer to our [Installation guide](INSTALLATION.md) for detailed instructions on how to get started.
+安装说明
+如需详细的入门操作指南，请参考我们的《安装指南》（Installation guide）。
 
 ## WSI Segmentation and Patching 
+全切片图像（WSI）分割与切片处理
 
 <img src="CLAM1.jpg" width="1000px" align="center" />
 The first step focuses on segmenting the tissue and excluding any holes. The segmentation of specific slides can be adjusted by tuning the individual parameters (e.g. dilated vessels appearing as holes may be important for certain sarcomas.) 
 The following example assumes that digitized whole slide image data in well known standard formats (.svs, .ndpi, .tiff etc.) are stored under a folder named DATA_DIRECTORY
+第一步的核心是对组织区域进行分割，并排除所有孔洞区域。对于特定切片的分割效果，可通过调整各项参数进行优化（例如，在某些肉瘤的分析场景中，表现为孔洞的扩张血管可能是重要的分析对象，需特殊调整参数）。
+以下示例假设数字化的全切片图像数据（采用常见标准格式，如.svs、.ndpi、.tiff 等）均存储在名为 “DATA_DIRECTORY” 的文件夹下，文件夹结构如下：
 
 ```bash
 DATA_DIRECTORY/
@@ -45,11 +61,13 @@ DATA_DIRECTORY/
 ```
 
 ### Basic, Fully Automated Run
+基础全自动运行方式
 ``` shell
 python create_patches_fp.py --source DATA_DIRECTORY --save_dir RESULTS_DIRECTORY --patch_size 256 --seg --patch --stitch 
 ```
 
 The above command will segment every slide in DATA_DIRECTORY using default parameters, extract all patches within the segemnted tissue regions, create a stitched reconstruction for each slide using its extracted patches (optional) and generate the following folder structure at the specified RESULTS_DIRECTORY:
+上述命令将使用默认参数对 “DATA_DIRECTORY” 文件夹中的所有切片进行分割，提取分割后组织区域内的所有切片块（patch），并使用提取的切片块为每个切片创建拼接重建图像（此步骤为可选），最终在指定的 “RESULTS_DIRECTORY” 文件夹下生成如下目录结构：
 
 ```bash
 RESULTS_DIRECTORY/
@@ -69,25 +87,43 @@ RESULTS_DIRECTORY/
 ```
 
 The **masks** folder contains the segmentation results (one image per slide).
+masks（掩码）文件夹：包含所有切片的分割结果（每个切片对应 1 张分割结果图像）。
+（注：此处的 “掩码” 是图像分割领域的常用概念，指通过像素标记区分组织区域与背景 / 孔洞区域的图像，可用于后续精准提取组织切片块。）
 The **patches** folder contains arrays of extracted tissue patches from each slide (one .h5 file per slide, where each entry corresponds to the coordinates of the top-left corner of a patch)
+patches（切片块）文件夹：包含从每张切片中提取的组织切片块数组（每个切片对应 1 个.h5 文件，文件中每条数据记录均对应 1 个切片块左上角的坐标信息）。
+（注：.h5 是一种高效存储海量数值数据的文件格式，此处仅存储切片块坐标而非原始图像数据，可大幅节省存储空间并提升后续特征提取的效率。）
 The **stitches** folder contains downsampled visualizations of stitched tissue patches (one image per slide) (Optional, not used for downstream tasks)
+stitches（拼接图）文件夹：包含组织切片块的下采样拼接可视化图像（每个切片对应 1 张拼接图）（此为可选输出，不用于后续下游任务）。
+（注：“下采样” 指降低图像分辨率以减少数据量，便于快速查看整体组织分布；该文件夹内容仅用于人工直观验证切片块提取效果，不参与模型训练或分析计算。）
 The auto-generated csv file **process_list_autogen.csv** contains a list of all slides processed, along with their segmentation/patching parameters used.
+自动生成的 CSV 文件process_list_autogen.csv：包含所有已处理切片的列表，以及处理每张切片时所用的分割 / 切片块提取参数。
+（注：CSV 文件可直接用 Excel 或代码打开，便于用户追溯每张切片的处理配置，也可用于批量管理或复现实验流程。）
 
 Additional flags that can be passed include:
 * `--custom_downsample`: factor for custom downscale (not recommended, ideally should first check if native downsamples exist)
 * `--patch_level`: which downsample pyramid level to extract patches from (default is 0, the highest available resolution)
 * `--no_auto_skip`: by default, the script will skip over files for which patched .h5 files already exist in the desination folder, this toggle can be used to override this behavior
+可额外传入的参数（flags）包括：
+--custom_downsample：自定义下采样系数（不推荐使用，理想情况下应先检查是否存在原生下采样层级）。（注：“下采样” 指降低图像分辨率以减少数据量；“原生下采样层级” 是全切片图像（WSI）生成时默认保存的不同分辨率版本，直接使用原生层级可避免自定义下采样可能导致的图像信息失真或处理效率下降。）
+--patch_level：指定从哪个下采样金字塔层级提取切片块（默认值为 0，即最高可用分辨率层级）。（注：全切片图像通常以 “金字塔层级” 形式存储，层级 0 对应原始扫描的最高分辨率，层级数值越大，分辨率越低；该参数可根据后续任务对分辨率的需求灵活选择，例如低分辨率层级适用于快速预览，高分辨率层级适用于精细特征提取。）
+--no_auto_skip：默认情况下，若目标文件夹中已存在某文件对应的切片块.h5 文件，脚本会自动跳过该文件的处理；启用此参数可覆盖该默认行为（即强制重新处理已存在.h5 文件的切片）。（注：该参数适用于需要更新切片块数据的场景，例如修改了分割参数后需重新生成切片块，但需注意会覆盖原有文件，且可能增加重复计算的时间成本。）
 
 Some parameter templates are also availble and can be readily deployed as good choices for default parameters:
 * `bwh_biopsy.csv`: used for segmenting biopsy slides scanned at BWH (Scanned using Hamamatsu S210 and Aperio GT450) 
 * `bwh_resection.csv`: used for segmenting resection slides scanned at BWH
 * `tcga.csv`: used for segmenting TCGA slides
+目前提供了部分参数模板，这些模板可作为默认参数的优质选择直接使用：
+bwh_biopsy.csv：适用于分割在布列根和妇女医院（BWH，Brigham and Women's Hospital）扫描的活检切片（使用滨松（Hamamatsu）S210 和阿佩里奥（Aperio）GT450 扫描仪扫描）。
+bwh_resection.csv：适用于分割在布列根和妇女医院扫描的切除标本切片。
+tcga.csv：适用于分割 TCGA（癌症基因组图谱，The Cancer Genome Atlas）切片。
 
 Simply pass the name of the template file to the --preset argument, for example, to use the biopsy template:
+只需将模板文件名传入--preset参数即可调用，例如，若要使用活检切片模板，命令如下：
 ``` shell
 python create_patches_fp.py --source DATA_DIRECTORY --save_dir RESULTS_DIRECTORY --patch_size 256 --preset bwh_biopsy.csv --seg --patch --stitch
 ```
 ### Custom Default Segmentation Parameters
+
 For advanced usage, in addition to using the default, single set of parameters defined in the script **create_patches_fp.py**, the user can define custom templates of parameters depending on the dataset. These templates are expected to be stored under **presets**, and contain values for each of the parameters used during segmentation and patching. 
 
 The list of segmentation parameters is as follows:
