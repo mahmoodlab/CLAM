@@ -20,12 +20,13 @@ import torch.nn.functional as F
 import pandas as pd
 import numpy as np
 
-
+# ---------- 1. 主入口：负责“跑完 k 折交叉验证” ----------
 def main(args):
-    # create results directory if necessary
+    # 若结果目录不存在就创建
     if not os.path.isdir(args.results_dir):
         os.mkdir(args.results_dir)
 
+    # 支持只跑部分折（k_start/k_end）
     if args.k_start == -1:
         start = 0
     else:
@@ -35,26 +36,32 @@ def main(args):
     else:
         end = args.k_end
 
+    # 用来收集每折的指标
     all_test_auc = []
     all_val_auc = []
     all_test_acc = []
     all_val_acc = []
     folds = np.arange(start, end)
+    # ---------- 2. 逐折训练 ----------
     for i in folds:
         seed_torch(args.seed)
+        # 根据平面 splits_i.csv 生成 train/val/test 三个数据集对象
         train_dataset, val_dataset, test_dataset = dataset.return_splits(from_id=False, 
                 csv_path='{}/splits_{}.csv'.format(args.split_dir, i))
         
         datasets = (train_dataset, val_dataset, test_dataset)
+        # 真正训练 + 验证 + 测试，返回 AUC、ACC 等指标
         results, test_auc, val_auc, test_acc, val_acc  = train(datasets, i, args)
+        # 收集指标
         all_test_auc.append(test_auc)
         all_val_auc.append(val_auc)
         all_test_acc.append(test_acc)
         all_val_acc.append(val_acc)
-        #write results to pkl
+        # 把当前折所有结果存成 pkl，方便后续画图或重分析
         filename = os.path.join(args.results_dir, 'split_{}_results.pkl'.format(i))
         save_pkl(filename, results)
 
+    # ---------- 3. 汇总 k 折结果 ----------
     final_df = pd.DataFrame({'folds': folds, 'test_auc': all_test_auc, 
         'val_auc': all_val_auc, 'test_acc': all_test_acc, 'val_acc' : all_val_acc})
 
@@ -64,7 +71,7 @@ def main(args):
         save_name = 'summary.csv'
     final_df.to_csv(os.path.join(args.results_dir, save_name))
 
-# Generic training settings
+# ---------- 4. 参数解析：训练所需全部超参 ----------
 parser = argparse.ArgumentParser(description='Configurations for WSI Training')
 parser.add_argument('--data_root_dir', type=str, default=None, 
                     help='data directory')
@@ -127,6 +134,7 @@ def seed_torch(seed=7):
 seed_torch(args.seed)
 
 encoding_size = 1024
+# ---------- 5. 根据任务选择数据集并创建 dataset 对象 ----------
 settings = {'num_splits': args.k, 
             'k_start': args.k_start,
             'k_end': args.k_end,
@@ -165,7 +173,7 @@ if args.task == 'task_1_tumor_vs_normal':
 
 elif args.task == 'task_2_tumor_subtyping':
     args.n_classes=3
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tumor_subtyping_dummy_clean.csv',
+    dataset = Generic_MIL_Dataset(csv_path = '/data/cuiping/RCC/labels_digital.csv',
                             data_dir= os.path.join(args.data_root_dir, 'tumor_subtyping_resnet_features'),
                             shuffle = False, 
                             seed = args.seed, 
@@ -174,12 +182,14 @@ elif args.task == 'task_2_tumor_subtyping':
                             patient_strat= False,
                             ignore=[])
 
+    # 子分型必须加 --subtyping 开关，否则这里 assert 失败
     if args.model_type in ['clam_sb', 'clam_mb']:
         assert args.subtyping 
         
 else:
     raise NotImplementedError
-    
+
+# ---------- 6. 结果目录 & 划分目录处理 ----------    
 if not os.path.isdir(args.results_dir):
     os.mkdir(args.results_dir)
 
@@ -197,7 +207,7 @@ assert os.path.isdir(args.split_dir)
 
 settings.update({'split_dir': args.split_dir})
 
-
+# 把当前实验所有参数写进 txt，方便复现
 with open(args.results_dir + '/experiment_{}.txt'.format(args.exp_code), 'w') as f:
     print(settings, file=f)
 f.close()
@@ -206,6 +216,7 @@ print("################# Settings ###################")
 for key, val in settings.items():
     print("{}:  {}".format(key, val))        
 
+# ---------- 7. 启动 k 折交叉验证 ----------
 if __name__ == "__main__":
     results = main(args)
     print("finished!")

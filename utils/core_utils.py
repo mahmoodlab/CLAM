@@ -63,7 +63,7 @@ class EarlyStopping:
         self.counter = 0
         self.best_score = None
         self.early_stop = False
-        self.val_loss_min = np.Inf
+        self.val_loss_min = np.inf
 
     def __call__(self, epoch, val_loss, model, ckpt_name = 'checkpoint.pt'):
 

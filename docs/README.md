@@ -1,335 +1,465 @@
-CLAM <img src="clam-logo.png" width="280px" align="right" />
-===========
-Data Efficient and Weakly Supervised Computational Pathology on Whole Slide Images.
-*Nature Biomedical Engineering*
+# CLAM模型运行记录
 
-[ArXiv](https://arxiv.org/abs/2004.09666) | [Journal Link](https://www.nature.com/articles/s41551-020-00682-w) | [Interactive Demo](http://clam.mahmoodlab.org) | [Cite](#reference) 
+环境准备
 
-***TL;DR:** CLAM is a high-throughput and interpretable method for data efficient whole slide image (WSI) classification using slide-level labels without any ROI extraction or patch-level annotations, and is capable of handling multi-class subtyping problems. Tested on three different WSI datasets, trained models adapt to independent test cohorts of WSI resections and biopsies as well as smartphone microscopy images (photomicrographs).*
-
-[<img src="ani.gif" width="470px" align="left" />](http://clam.mahmoodlab.org)
-## CLAM: A Deep-Learning-based Pipeline for Data Efficient and Weakly Supervised Whole-Slide-level Analysis 
-[Pre-requisites](#pre-requisites) • [Installation](INSTALLATION.md) • [Segmentation and Patching](#wsi-segmentation-and-patching) • [Feature Extraction](#weakly-supervised-learning-using-slide-level-labels-with-clam) • [Weakly Supervised Training](#Training-Splits) • [Testing](#Testing-and-Evaluation-Script) • [Trained Models](#Trained-Model-Checkpoints) • [Heatmap Visualization](#Heatmap-Visualization) • [Examples](#examples) • [Pre-print](https://arxiv.org/abs/2004.09666) • [Demo](http://clam.mahmoodlab.org) • [Cite](#reference)
-
-***How does CLAM work?** Clustering-constrained Attention Multiple Instance Learning (CLAM) is a deep-learning-based weakly-supervised method that uses attention-based learning to automatically identify sub-regions of high diagnostic value in order to accurately classify the whole slide, while also utilizing instance-level clustering over the representative regions identified to constrain and refine the feature space.*
-
-© [Mahmood Lab](http://www.mahmoodlab.org) - This code is made available under the GPLv3 License and is available for non-commercial academic purposes. 
-
-## Updates:
-* **04/15/2025**: Checkout our new repository [Trident](https://github.com/mahmoodlab/TRIDENT) for whole-slide image processing with support for 25+ foundation models, including [UNIv2](https://huggingface.co/MahmoodLab/UNI2-h), [CONCH](https://huggingface.co/MahmoodLab/CONCH), [TITAN](https://huggingface.co/MahmoodLab/TITAN), and many more!
-* **04/06/2024**: [UNI](https://github.com/mahmoodlab/UNI) and [CONCH](https://github.com/mahmoodlab/CONCH) are now available to select as pretrained encoders. See [Using CONCH / UNI as Pretrained Encoders](#using-conch--uni-as-pretrained-encoders) for more details. Please make sure all dependencies are installed correctly by installing the latest **env.yml** file (see [Installation guide](INSTALLATION.md) for details), and using the corresponding **clam_latest** conda environment.
-* 03/19/2024: We are releasing [UNI](https://github.com/mahmoodlab/UNI) and [CONCH](https://github.com/mahmoodlab/CONCH), a pair of SOTA pretrained encoders that produce strong representations for histopathology images and enhance performance on various computational pathology workflows, including the MIL-based CLAM workflow. 
-* 05/24/2021: Script for heatmap visualization now available via **create_heatmaps.py**, with the configuration template located in **heatmaps/configs**. See [Heatmap visualization for demo and instructions.](#Heatmap-Visualization)
-* 03/01/2021: New, fast patching/feature extraction pipeline is now available. **TL;DR:** since CLAM only requires image features for training, it is not necessary to save the actual image patches, the new pipeline rids of this overhead and instead only saves the coordinates of image patches during "patching" and loads these regions on the fly from WSIs during feature extraction. This is significantly faster than the old pipeline and usually only takes 1-2s for "patching" and a couple minutes to featurize a WSI. To use the new pipeline, make sure you are calling **create_patches_fp.py** and **extract_features_fp.py** instead of the old **create_patches.py** and **extract_features.py** scripts.
-
-**Note**: while we hope that the newest update will require minimal changes to the user's workflow, if needed, you may reference the old version of the code base [here](https://github.com/mahmoodlab/CLAM/tree/deprecated). Please report any issues in the public forum. 
-
-**Warning**: the latest update will by default resize image patches to 224 x 224 before extracting features using the pretrained encoder. This change serves to make it more consistent with the evaluation protocol used in UNI, CONCH and other studies. If you wish to preserve the original size of the image patches generated during patching or use a different image size for feature extraction, you can do so by specifying `--target_patch_size` in **extract_features_fp.py**.
-
-**RE update 03/01/21**: note that the README has been updated to use the new, faster pipeline by default. If you still wish to use the old pipeline, refer to: [Guide for Old Pipeline](README_old.md). It saves tissue patches, which is signficantly slower and takes up a lot of storage space but can still be useful if you need to work with original image patches instead of feature embeddings.
-
-## Installation:
-Please refer to our [Installation guide](INSTALLATION.md) for detailed instructions on how to get started.
-
-## WSI Segmentation and Patching 
-
-<img src="CLAM1.jpg" width="1000px" align="center" />
-The first step focuses on segmenting the tissue and excluding any holes. The segmentation of specific slides can be adjusted by tuning the individual parameters (e.g. dilated vessels appearing as holes may be important for certain sarcomas.) 
-The following example assumes that digitized whole slide image data in well known standard formats (.svs, .ndpi, .tiff etc.) are stored under a folder named DATA_DIRECTORY
-
-```bash
-DATA_DIRECTORY/
-	├── slide_1.svs
-	├── slide_2.svs
-	└── ...
+```shell
+#参考INSTALLATION.md 很详细
 ```
 
-### Basic, Fully Automated Run
-``` shell
-python create_patches_fp.py --source DATA_DIRECTORY --save_dir RESULTS_DIRECTORY --patch_size 256 --seg --patch --stitch 
-```
 
-The above command will segment every slide in DATA_DIRECTORY using default parameters, extract all patches within the segemnted tissue regions, create a stitched reconstruction for each slide using its extracted patches (optional) and generate the following folder structure at the specified RESULTS_DIRECTORY:
-
-```bash
-RESULTS_DIRECTORY/
-	├── masks
-    		├── slide_1.png
-    		├── slide_2.png
-    		└── ...
-	├── patches
-    		├── slide_1.h5
-    		├── slide_2.h5
-    		└── ...
-	├── stitches
-    		├── slide_1.png
-    		├── slide_2.png
-    		└── ...
-	└── process_list_autogen.csv
-```
-
-The **masks** folder contains the segmentation results (one image per slide).
-The **patches** folder contains arrays of extracted tissue patches from each slide (one .h5 file per slide, where each entry corresponds to the coordinates of the top-left corner of a patch)
-The **stitches** folder contains downsampled visualizations of stitched tissue patches (one image per slide) (Optional, not used for downstream tasks)
-The auto-generated csv file **process_list_autogen.csv** contains a list of all slides processed, along with their segmentation/patching parameters used.
-
-Additional flags that can be passed include:
-* `--custom_downsample`: factor for custom downscale (not recommended, ideally should first check if native downsamples exist)
-* `--patch_level`: which downsample pyramid level to extract patches from (default is 0, the highest available resolution)
-* `--no_auto_skip`: by default, the script will skip over files for which patched .h5 files already exist in the desination folder, this toggle can be used to override this behavior
-
-Some parameter templates are also availble and can be readily deployed as good choices for default parameters:
-* `bwh_biopsy.csv`: used for segmenting biopsy slides scanned at BWH (Scanned using Hamamatsu S210 and Aperio GT450) 
-* `bwh_resection.csv`: used for segmenting resection slides scanned at BWH
-* `tcga.csv`: used for segmenting TCGA slides
-
-Simply pass the name of the template file to the --preset argument, for example, to use the biopsy template:
-``` shell
-python create_patches_fp.py --source DATA_DIRECTORY --save_dir RESULTS_DIRECTORY --patch_size 256 --preset bwh_biopsy.csv --seg --patch --stitch
-```
-### Custom Default Segmentation Parameters
-For advanced usage, in addition to using the default, single set of parameters defined in the script **create_patches_fp.py**, the user can define custom templates of parameters depending on the dataset. These templates are expected to be stored under **presets**, and contain values for each of the parameters used during segmentation and patching. 
-
-The list of segmentation parameters is as follows:
-* `seg_level`: downsample level on which to segment the WSI (default: -1, which uses the downsample in the WSI closest to 64x downsample)
-* `sthresh`: segmentation threshold (positive integer, default: 8, using a higher threshold leads to less foreground and more background detection)
-* `mthresh`: median filter size (positive, odd integer, default: 7)
-* `use_otsu`: use otsu's method instead of simple binary thresholding (default: False) 
-* `close`: additional morphological closing to apply following initial thresholding (positive integer or -1, default: 4)
-
-The list of contour filtering parameters is as follows:
-* `a_t`: area filter threshold for tissue (positive integer, the minimum size of detected foreground contours to consider, relative to a reference patch size of 512 x 512 at level 0, e.g. a value 10 means only detected foreground contours of size greater than 10 512 x 512 sized patches at level 0 will be processed, default: 100)
-* `a_h`: area filter threshold for holes (positive integer, the minimum size of detected holes/cavities in foreground contours to avoid, once again relative to 512 x 512 sized patches at level 0, default: 16)
-* `max_n_holes`: maximum of holes to consider per detected foreground contours (positive integer, default: 10, higher maximum leads to more accurate patching but increases computational cost)
-
-The list of segmentation visualization parameters is as follows:
-* `vis_level`: downsample level to visualize the segmentation results (default: -1, which uses the downsample in the WSI closest to 64x downsample)
-* `line_thickness`: line thickness to draw visualize the segmentation results (positive integer, in terms of number of pixels occupied by drawn line at level 0, default: 250)
-
-The list of patching parameters is as follows:
-* `use_padding`: whether to pad the border of the slide (default: True)
-* `contour_fn`: contour checking function to decide whether a patch should be considered foreground or background (choices between 'four_pt' - checks if all four points in a small, grid around the center of the patch are inside the contour, 'center' - checks if the center of the patch is inside the contour, 'basic' - checks if the top-left corner of the patch is inside the contour, default: 'four_pt')
-
-
-### Two-Step Run (Mannually Adjust Parameters For Specific Slides)
-To ensure that high quality segmentation and extraction of relevant tissue patches, user has the option of first performing segmentation (typically around 1s per slide), inspecting the segmentation results and tweaking the parameters for select slides if necessary and then extracting patches using the tweaked parameters. i.e., first run:
-
-``` shell
-python create_patches_fp.py --source DATA_DIRECTORY --save_dir RESULTS_DIRECTORY --patch_size 256 --seg  
-```
-The above command will segment every slide in DATA_DIRECTORY using default parameters and generate the csv file, but will NOT patch just yet (**patches** and **stitches** folders will be empty)
-
-The csv file can be tweaked for specific slides, and be passed to the script via the --process_list CSV_FILE_NAME such that the script will use the user-updated specifications. Before tweaking the segmentation parameters, the user should make a copy of the csv file and give it a new name (e.g. process_list_edited.csv) because otherwise this file with the default name is overwritten the next time the command is run. Then the user has the option to tweak the parameters for specific slides by changing their corresponding fields in the csv file. The **process** column stores a binary variable (0 or 1) for whether the script should process a specific slide. This allows the user to toggle on just the select few slides to quickly confirm whether the tweaked parameters produce satisfactory results. For example, to re-segment just slide_1.svs again using user-updated parameters, make the appropriate changes to its fields, update its **process** cell to 1, save the csv file, and pass its name to the same command as above:
-
-``` shell
-python create_patches_fp.py --source DATA_DIRECTORY --save_dir RESULTS_DIRECTORY --patch_size 256 --seg --process_list process_list_edited.csv
-```
-
-When satisfied with the segmentation results, the user should make the **process** cell for all slides that need to be processed to 1, save the csv file, and run patching with the saved csv file (just like in the fully-automated run use case, with the additional csv file argument):
-
-``` shell
-python create_patches_fp.py --source DATA_DIRECTORY --save_dir RESULTS_DIRECTORY --patch_size 256 --seg --process_list CSV_FILE_NAME --patch --stitch
-```
-## Weakly-Supervised Learning using Slide-Level Labels with CLAM
-
-<img src="CLAM2.jpg" width="1000px" align="center" />
-
-### Feature Extraction (GPU Example)
-```bash
-CUDA_VISIBLE_DEVICES=0 python extract_features_fp.py --data_h5_dir DIR_TO_COORDS --data_slide_dir DATA_DIRECTORY --csv_path CSV_FILE_NAME --feat_dir FEATURES_DIRECTORY --batch_size 512 --slide_ext .svs
-```
-The above command expects the coordinates .h5 files to be stored under DIR_TO_COORDS and a batch size of 512 to extract 1024-dim features from each tissue patch for each slide and produce the following folder structure:
-```bash
-FEATURES_DIRECTORY/
-    ├── h5_files
-            ├── slide_1.h5
-            ├── slide_2.h5
-            └── ...
-    └── pt_files
-            ├── slide_1.pt
-            ├── slide_2.pt
-            └── ...
-```
-where each .h5 file contains an array of extracted features along with their patch coordinates (note for faster training, a .pt file for each slide is also created for each slide, containing just the patch features). The csv file is expected to contain a list of slide filenames (without the filename extensions) to process (the easiest option is to take the csv file auto generated by the previous segmentation/patching step, and delete the filename extensions)
-
-### Using CONCH / UNI as Pretrained Encoders
-If using UNI or CONCH, first refer to their respective HF page below to request and download the model weights (pytorch_model.bin). 
-
-UNI: https://huggingface.co/MahmoodLab/UNI
-
-CONCH: https://huggingface.co/MahmoodLab/CONCH
-
-After successfully downloading the model checkpoints, you need to set the `CONCH_CKPT_PATH` and `UNI_CKPT_PATH` environment variable to the path of the pretrained encoder checkpoints, before running the feature extraction script. For example, if you have downloaded the pretrained UNI and CONCH checkpoints and placed them in the **checkpoints/conch** and **checkpoints/uni** folders respectively, you can set the environment variables as follows:
-```bash
-export CONCH_CKPT_PATH=checkpoints/conch/pytorch_model.bin
-export UNI_CKPT_PATH=checkpoints/uni/pytorch_model.bin
-```
-When running the **extract_features_fp.py** also set `--model_name` to either 'uni_v1' or 'conch_v1' to use the respective encoder.
-
-Note that these encoder models (especially UNI, which uses ViT-L) are more computationally expensive and require more GPU memory than the default ResNet50 encoder, so expect longer runtimes and reduced batch sizes accordingly if you run out of GPU memory. UNI will produce 1024-dim features, while CONCH will produce 512-dim features.
-
-### Datasets
-The data used for training and testing are expected to be organized as follows:
-```bash
-DATA_ROOT_DIR/
-    ├──DATASET_1_DATA_DIR/
-        ├── h5_files
-                ├── slide_1.h5
-                ├── slide_2.h5
-                └── ...
-        └── pt_files
-                ├── slide_1.pt
-                ├── slide_2.pt
-                └── ...
-    ├──DATASET_2_DATA_DIR/
-        ├── h5_files
-                ├── slide_a.h5
-                ├── slide_b.h5
-                └── ...
-        └── pt_files
-                ├── slide_a.pt
-                ├── slide_b.pt
-                └── ...
-    └──DATASET_3_DATA_DIR/
-        ├── h5_files
-                ├── slide_i.h5
-                ├── slide_ii.h5
-                └── ...
-        └── pt_files
-                ├── slide_i.pt
-                ├── slide_ii.pt
-                └── ...
-    └── ...
-```
-Namely, each dataset is expected to be a subfolder (e.g. DATASET_1_DATA_DIR) under DATA_ROOT_DIR, and the features extracted for each slide in the dataset is stored as a .pt file sitting under the **pt_files** folder of this subfolder.
-Datasets are also expected to be prepared in a csv format containing at least 3 columns: **case_id**, **slide_id**, and 1 or more labels columns for the slide-level labels. Each **case_id** is a unique identifier for a patient, while the **slide_id** is a unique identifier for a slide that correspond to the name of an extracted feature .pt file. This is necessary because often one patient has multiple slides, which might also have different labels. When train/val/test splits are created, we also make sure that slides from the same patient do not go to different splits. The slide ids should be consistent with what was used during the feature extraction step. We provide 2 dummy examples of such dataset csv files in the **dataset_csv** folder: one for binary tumor vs. normal classification (task 1) and one for multi-class tumor_subtyping (task 2). 
-
-Dataset objects used for actual training/validation/testing can be constructed using the **Generic_MIL_Dataset** Class (defined in **datasets/dataset_generic.py**). Examples of such dataset objects passed to the models can be found in both **main.py** and **eval.py**. 
-
-For training, look under main.py:
-```python 
-if args.task == 'task_1_tumor_vs_normal':
-    args.n_classes=2
-    dataset = Generic_MIL_Dataset(csv_path = 'dataset_csv/tumor_vs_normal_dummy_clean.csv',
-                            data_dir= os.path.join(args.data_root_dir, 'tumor_vs_normal_feat_resnet'),
-                            shuffle = False, 
-                            seed = args.seed, 
-                            print_info = True,
-                            label_dict = {'normal_tissue':0, 'tumor_tissue':1},
-                            label_col = 'label',
-                            ignore=[])
-```
-The user would need to pass:
-* csv_path: the path to the dataset csv file
-* data_dir: the path to saved .pt features
-* label_dict: a dictionary that maps labels in the label column to numerical values
-* label_col: name of the label column (optional, by default it's 'label')
-* ignore: labels to ignore (optional, by default it's an empty list)
-
-Finally, the user should add this specific 'task' specified by this dataset object in the --task arguments as shown below:
+### ✅NULL
 
 ```python
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal',  'task_2_tumor_subtyping'])
+#WSI 分段和修补
+#相较于其他wsi文件，这个需要更高的像素，所以在代码中注释掉了面积检查部分
+#用tcga来分割的话，肉眼看没啥问题，跑出来感觉也还行
+(clam_env) cuiping@amax:~/CLAM$ python check_tcga_fnac_full.py
+随机 500 张 patch 里空白约占 6.8% #还行啊还行
+
+#用fnac来分割，速度较慢
+python /home/cuiping/CLAM/create_patches_fp.py \
+  --source /data/cuiping/NULL/00_raw_wsi \
+  --save_dir /data/cuiping/NULL/patches_out \
+  --patch_size 256 \
+  --seg --patch --stitch \
+  --preset fnac.csv
+#结果是真的还行啊
+(clam_env) cuiping@amax:~/CLAM$ python check_tcga_fnac_full.py
+随机 500 张 patch 里空白约占 0.6%  #降低了很多
+
+#特征提取
+CUDA_VISIBLE_DEVICES=2 python extract_features_fp.py \
+    --data_h5_dir /data/cuiping/NULL/patches_out \
+    --data_slide_dir /data/cuiping/NULL/00_raw_wsi \
+    --csv_path /data/cuiping/NULL/patches_out/process_list_autogen.csv \
+    --feat_dir /data/cuiping/NULL/features \
+    --batch_size 128 \
+    --slide_ext .svs
+
+#Training Splits  训练拆分（缺失标签，后续无法运行）
+python create_splits_seq.py \
+  --task task_2_tumor_subtyping \
+  --csv_path /data/cuiping/NULL/labels_digital.csv \
+  --output_dir ~/CLAM/splits \
+  --k 10 \
+  --seed 42 \
+  --val_frac 0.15 \
+  --test_frac 0.15
+         
 ```
 
-### Training Splits
-For evaluating the algorithm's performance, multiple folds (e.g. 10-fold) of train/val/test splits can be used. Example 10-fold 80/10/10 splits for the two dummy datasets can be found under the **splits** folder. These splits can be automatically generated using the create_splits_seq.py script with minimal modification just like with **main.py**. For example, tumor_vs_normal splits can be created by calling:
+
+
+### ✅RCC（成功）
+
+```shell
+cd /home/cuiping/CLAM
+#WSI 分段和修补
+python /home/cuiping/CLAM/create_patches_fp.py \   
+    --source /data/cuiping/RCC/00_raw_wsi \        # 原始 .svs/.ndpi 文件夹
+    --save_dir /data/cuiping/RCC/patches_out \     # 输出根目录
+    --patch_size 256 \                             # 补丁尺寸（patch_size） & 步长（step）
+    --seg --patch --stitch \                       # 三连：分割→切补丁→拼概览图
+    --preset tcga.csv                              # 超参数表（一行 CSV）
+1-组织前景分割（只用 --seg）  mask
+目的：把玻璃空白、刀痕、笔迹去掉，得到“组织轮廓”并保存一张 mask 预览图。
+① /project/output/masks/TCGA-XXXX.jpg
+‑ 一张长宽≈千像素级别的 JPEG，黑底白框就是算法认为“有组织”的区域。
+② /project/output/process_list_autogen.csv
+‑ 记录这次用的阈值、层数、面积过滤值，下次可复用或微调。
+2-切 patch（--seg --patch 一起开）
+目的：只在“有组织”的轮廓内部切 256×256 小图，并保存坐标。
+③ /project/output/patches/TCGA-XXXX.h5
+‑ 里面数据集 /coords 保存所有 patch 左上角 (x,y) 在 0 级参考系下的坐标；
+‑ /contours 保存对应轮廓，方便后续“拼回去”。
+‑ 如果 use_padding=True，边缘不足 256 会镜像补边。
+④ 控制台会打印切了多少张，例如 Wrote 18,764 patches。
+3-（可选）把 patch 结果拼成热图（--stitch）
+目的：肉眼确认切得匀不匀、有没有漏切。
+⑤ /project/output/stitches/TCGA-XXXX.jpg
+‑ 一张缩小 64 倍的鸟瞰图，每个小格就是一张 patch，绿色=保留，红色=被过滤，黑区=背景。
+‑ 若发现某些区域没格子，可回头调小面积过滤或改轮廓函数再切一次。
+
+# 特征提取
+CUDA_VISIBLE_DEVICES=2 python extract_features_fp.py \
+    --data_h5_dir /data/cuiping/RCC/patches_out \      # 已裁剪patch的h5文件目录
+    --data_slide_dir /data/cuiping/RCC/00_raw_wsi \    # 原始WSI目录
+    --csv_path /data/cuiping/RCC/patches_out/process_list_autogen.csv \  # 处理列表
+    --feat_dir features \                                # 输出特征目录
+    --batch_size 128 \                                   # 推理batch size
+    --slide_ext .svs                                     # 切片文件扩展名，，用于过滤非 svs 文件
+
+
+(clam_env) cuiping@amax:/data/cuiping/RCC/features$ tree -L 2 
+.
+├── h5_files          # 每个 WSI 对应一个 .h5 文件，里面是 patch 特征（features） + 坐标（coords）
+├── pt_files          # 每个 WSI 对应一个 .pt 文件，.pt 可能是 dict 或 Tensor 里面是 tensor 格式的特征（PyTorch 可用）
+
+
+#Training Splits  训练拆分
+  python create_splits_seq.py \
+  --task task_2_tumor_subtyping \
+  --csv_path /data/cuiping/RCC/labels_digital.csv \
+  --output_dir ~/CLAM/splits \
+  --k 10 \
+  --seed 42 \
+  --val_frac 0.15 \  #一定要加这个，md搞了两天，划分数据集就是不对
+  --test_frac 0.15
+
+
+#新版本scipy（1.11.0+）移除了对非数值数据的 stats.mode 支持,用 np.unique 来替代实现相同的功能
+#将
+label = stats.mode(label)[0]
+# 替换旧的 stats.mode 调用
+unique, counts = np.unique(label, return_counts=True)
+label = unique[np.argmax(counts)]
+
+整个划分文件里，所有样本都被标成了“验证集”
+这意味着什么？
+训练集 = 0 条 → train 列全是 False（甚至不存在）
+测试集 = 0 条 → test 列也全是 False
+于是 weighted_sample 在计算 训练集 类权重时，某一类可用样本 = 0 → 除零崩溃
+
+# 训练三分类CLAM模型（放在服务器后台---脚本在CLAM/tools）
+CUDA_VISIBLE_DEVICES=0 python ~/CLAM/main.py \
+  --drop_out 0.25 \
+  --early_stopping \
+  --lr 2e-4 \
+  --k 10 \
+  --split_dir ~/CLAM/splits/task_2_tumor_subtyping_100 \
+  --exp_code RCC_subtyping_clam_sb \
+  --weighted_sample \
+  --bag_loss ce \
+  --inst_loss svm \
+  --task task_2_tumor_subtyping \
+  --model_type clam_sb \
+  --log_data \
+  --data_root_dir /data/cuiping/RCC/features \
+  --embed_dim 1024 \
+  --subtyping
+
+
+# 看缺失
+comm -13 \
+  <(ls /data/cuiping/RCC/features/pt_files/ | sed 's/\.pt$//' | sort) \
+  <(cut -d, -f2-4 splits_0.csv | tr ',' '\n' | sort)
+  
+
+
+# ==========================================================
+# 实验全局参数
+# ==========================================================
+exp_arguments:
+  n_classes: 3                    # 模型输出的类别数（与训练时保持一致）
+  save_exp_code: HEATMAP_RCC_OUTPUT   # 本次推理结果的主文件夹名，所有产出都会放在它下面
+  raw_save_dir: /data/cuiping/RCC/heatmap_raw
+                                  # 原始热图数据（numpy、csv、patch坐标等）落盘路径
+  production_save_dir: /data/cuiping/RCC/heatmap_production_results
+                                  # 最终可展示的彩色热图/JPEG保存路径
+  batch_size: 128                 # 前向推理时，一次性喂给encoder的patch数
+
+# ==========================================================
+# 数据/Slide 相关
+# ==========================================================
+data_arguments:
+  data_dir: /data/cuiping/RCC/00_raw_wsi/ # 切片根目录；也可写成dict做分库映射
+  #data_dir_key: source            # 当data_dir是dict时，CSV中对应哪一列作为key
+  process_list: /data/cuiping/RCC/patches_out/process_list_autogen.csv
+                                  # 必需CSV，至少含slide_id；可额外包含label、seg/patch参数
+  preset: presets/tcga.csv  # 预设的segment/patch参数表（组织前景分割、白片过滤等）
+  slide_ext: .svs                 # 切片文件扩展名
+  label_dict:                     # 字符串标签→整数映射，用于可视化时显示类别名
+    KICH: 0
+    KIRC: 1
+    KIRP: 2
+
+    # ==========================================================
+# 切patch参数
+# ==========================================================
+patching_arguments:
+  patch_size: 256                 # 在原图0级下采样的patch像素大小
+  overlap: 0.5                    # 相邻patch重叠比例（0.5=50%）
+  patch_level: 0                  # 从哪一层下采样开始切patch；0=最高分辨率
+  custom_downsample: 1            # 在patch_level基础上再手动下采样几倍（1=不额外下采）
+
+# ==========================================================
+# 编码器（特征提取器）
+# ==========================================================
+encoder_arguments:
+  model_name: resnet50_trunc      # 可选resnet50_trunc / uni_v1 / conch_v1
+  target_img_size: 224            # 把patch resize成多大再送入encoder
+
+# ==========================================================
+# 下游模型（CLAM）加载
+# ==========================================================
+model_arguments:
+  ckpt_path: /home/cuiping/CLAM/results/RCC_subtyping_clam_sb_s1/s_3_checkpoint.pt
+                                  # 训练得到的最佳checkpoint
+  model_type: clam_sb             # clam_sb / clam_mb / mil / transmil 等
+  initiate_fn: initiate_model     # 对应utils/eval_utils.py中的初始化函数名
+  model_size: small               # CLAM内部fc大小（small/large）
+  drop_out: 0.                    # 推理时一般设0
+  embed_dim: 1024                 # encoder输出特征维度（与训练时一致）
+
+# ==========================================================
+# 热图可视化专属参数
+# ==========================================================
+heatmap_arguments:
+  vis_level: 1                    # 在slide的哪一层下采样上绘制热图；-1≈32×下采
+  alpha: 0.4                      # 热图与原图融合透明度（0=只看原图，1=只看热图）
+  blank_canvas: false             # true=纯白背景绘制热图；false=原图H&E当背景
+  save_orig: true                 # 是否额外保存一份原始H&E图（与热图同分辨率）
+  save_ext: jpg                   # 热图/原图保存格式
+  use_ref_scores: true            # 是否用“非重叠patch”分布做percentile归一化
+  blur: false                     # 是否对热图再做高斯平滑
+  use_center_shift: true          # 判断patch是否在前景轮廓内时，是否把角点往中心移
+  use_roi: false                  # 是否只计算指定ROI（x1,x2,y1,y2）内的热图
+  calc_heatmap: true              # 是否真正计算重叠细粒度热图（false则只输出粗热图）
+  binarize: false                 # 是否把attention得分二值化
+  binary_thresh: -1               # 二值化阈值；<0 时自动用Otsu
+  custom_downsample: 1            # 最终保存前再下采样几倍（1=不额外降分辨率）
+  cmap: jet                       # 热图配色盘（matplotlib colormap）
+
+# ==========================================================
+# 采样/保存高注意力patch示例
+# ==========================================================
+sample_arguments:
+  samples:
+    - name: "topk_high_attention" # 采样策略名称，随意起
+      sample: true                # 是否启用该策略
+      seed: 1                     # 随机种子（top-k本身无随机，但后续可能加打乱）
+      k: 15                       # 取attention最高的k张patch存图
+      mode: topk                  # 固定写topk；后续可扩展random/bottomk等
+
+/data/cuiping/RCC/heatmap_production_results/
+HEATMAP_RCC_OUTPUT/
+├── sampled_patches/        ← 抽样出的高注意力 ROI patch
+│   ├── label_Unspecified_pred_0/
+│   │   └── topk_high_attention/   ← attention最高的patch在这里！
+│   ├── label_Unspecified_pred_1/
+│   └── label_Unspecified_pred_2/
+│
+└── Unspecified/            ← 每个 slide 对应的完整热图、原图、mask等（可视化）
+
+/data/cuiping/RCC/heatmap_raw/
+├── HEATMAP_RCC_OUTPUT/          ← 本次热图生成实验的主输出目录（--save_exp_code）
+│   ├── config.yaml              ← 本次热图生成的配置文件
+│   └── Unspecified/             ← 存放每张 slide 的热图文件夹
+│       ├── TCGA-2Z-A9J2-01Z-00-DX1.AC19245F-B3B9-4A3A-89A3-A8B2E4BD988A/
+│       ├── TCGA-BP-5006-01A-01-BS1.1d7bd0e2-6853-42db-b42e-ab4a413d0430/
+│       ├── TCGA-KM-8440-01Z-00-DX1.528E053C-E8A4-464F-BE47-412836B1C31B/
+│       ├── TCGA-KM-8442-01Z-00-DX1.46835CE2-819D-4887-9633-422BC9F5E366/
+│       └── ... (更多 slide)
+
+单个 slide 文件夹结构
+/data/cuiping/RCC/heatmap_raw/HEATMAP_RCC_OUTPUT/Unspecified/TCGA-2Z-A9J2-01Z-00-DX1.AC19245F-B3B9-4A3A-89A3-A8B2E4BD988A/
+├── TCGA-2Z-A9J2-01Z-00-DX1..._mask.jpg              ← 组织分割图（mask 可视化）
+├── TCGA-2Z-A9J2-01Z-00-DX1..._mask.pkl              ← 分割掩膜数据文件（numpy）
+├── TCGA-2Z-A9J2-01Z-00-DX1..._blockmap.png          ← 注意力热图（可视化）
+├── TCGA-2Z-A9J2-01Z-00-DX1..._blockmap.h5           ← 热图原始数值（attention_scores + coords）
+├── TCGA-2Z-A9J2-01Z-00-DX1..._0.5_roi_False.h5      ← 中间版本热图数据（不同参数）
+├── TCGA-2Z-A9J2-01Z-00-DX1...pt                     ← slide 的特征向量（torch tensor）
+└── TCGA-2Z-A9J2-01Z-00-DX1...h5                     ← 特征 + 坐标数据（HDF5）
+```
+
+```
+H&E 染色
+| 染料                  | 染色对象               | 显示颜色      | 生物学意义     |
+| ------------------- | ------------------ | --------- | --------- |
+| **Hematoxylin苏木精 (H)** | 细胞核、核仁（富含 DNA/RNA） | 深蓝色 / 紫蓝色 | 细胞活动、增殖   |
+| **Eosin伊红 (E)**       | 细胞质、胶原、基质、血浆       | 粉红色 / 橙红色 | 细胞结构、间质环境 |
+
+颜色	组织类型	说明
+🔵 深蓝紫	细胞核密集区域（肿瘤细胞团、淋巴细胞浸润）	往往是肿瘤病灶或活跃区域
+💗 淡粉红	细胞质或间质、结缔组织	正常组织或支撑结构
+⚪ 白色	背景、空泡、血管腔	非组织区域
+🟣 紫红混合	细胞团块、核密集但带细胞质的区域	常为肿瘤实质区
+🩸 暗红 / 橙红	红细胞聚集、出血区	可见坏死或血管相关病灶
+
+mask 暗红 + heatmap 红黄重叠 → 模型聚焦肿瘤组织；
+mask 暗红 + heatmap 蓝 → 模型识别为正常结构；
+mask 白 + heatmap 红 → 模型出错（看了背景伪影）。
+
+癌细胞（Malignant cells）在 H&E 下的典型表现
+1️⃣ 核异型性（nuclear atypia）
+| 现象               | 含义            |
+| ---------------- | ------------- |
+| 核大、染色深（深蓝或深紫）    | DNA 含量增多、分裂活跃 |
+| 核形不规则（圆→椭圆→扭曲）   | 染色质异常聚集       |
+| 核仁明显、偏位          | RNA 活跃合成      |
+| 核质比高（N/C ratio↑） | 核体积显著大于细胞质    |
+👉 在 H&E 图像中表现为：
+蓝紫色区域密集、颗粒粗、核轮廓不平滑。
+2️⃣ 组织结构紊乱（architectural disorganization）
+| 现象        | H&E 下表现          |
+| --------- | ---------------- |
+| 腺体或导管排列紊乱 | 正常结构消失，形成“乱堆”细胞团 |
+| 极性消失      | 细胞方向混乱、排列不整齐     |
+| 边界浸润性生长   | 细胞侵入周围间质、血管      |
+👉 在热图上通常对应模型的 高注意力红区。
+3️⃣ 细胞异质性（cellular pleomorphism）
+| 现象            | H&E 表现    |
+| ------------- | --------- |
+| 同一区域细胞大小差异大   | 某些核大、某些核小 |
+| 核形多样（圆、椭圆、肾形） | 说明克隆异质性   |
+| 染色质分布不均       | 蓝紫深浅不一    |
+👉 模型往往捕捉到这种纹理不均的区域作为诊断线索。
+4️⃣ 增生与有丝分裂（mitosis）
+| 现象                     | H&E 下表现      |
+| ---------------------- | ------------ |
+| 出现分裂象（Mitotic figures） | 核呈梅花状、Y 形或棒状 |
+| 多核巨细胞                  | 同一细胞有多个蓝核    |
+👉 深紫色小点状核多 → 分裂活跃 → 高度恶性区域。
+5️⃣ 坏死与出血（necrosis / hemorrhage）
+| 现象        | H&E 颜色表现          |
+| --------- | ----------------- |
+| 坏死        | 粉白或灰区，无清晰核，细胞界限模糊 |
+| 出血        | 暗红色、背景中红细胞堆积      |
+| 核碎裂 / 核溶解 | 蓝色残核碎片散在          |
+👉 模型常在坏死边缘区高注意力，因为该区域代表肿瘤生长活跃边界。
+```
+
+
+
+### ✅NSCLC（跑到一半放弃）
+
+```shell
+#WSI 分段和修补
+python /home/cuiping/CLAM/create_patches_fp.py \
+    --source /data/cuiping/NSCLC/00_raw_wsi \
+    --save_dir /data/cuiping/NSCLC/patches_out \
+    --patch_size 256 \
+    --seg --patch --stitch \
+    --preset tcga.csv
+    
+#可能存在部分未seg，需要重新切割，后面跑特征提取的时候就知道了
+patches_out/
+    ├── patches/
+    │   ├── slide_1.h5
+    │   ├── slide_2.h5
+    │   └── ...
+    ├── process_list_autogen.csv
+    ├── stitches/   (可选：拼接后的图像)
+    └── masks/      (可选：分割的掩膜图像)
+
+#特征提取（GPU 示例）
+#手动从huggingface下载bin文件和config文件
+CLAM/
+    ├── resnet50_tv_in1k/
+    │   ├── pytorch_model.bin
+    │   ├── config.json
+
+#特征提取   
+CUDA_VISIBLE_DEVICES=2 python extract_features_fp.py \
+    --data_h5_dir /data/cuiping/NSCLC/patches_out \      # 已裁剪patch的h5文件目录
+    --data_slide_dir /data/cuiping/NSCLC/00_raw_wsi \    # 原始WSI目录
+    --csv_path /data/cuiping/NSCLC/patches_out/process_list_autogen.csv \  # 处理列表
+    --feat_dir features \                                # 输出特征目录
+    --batch_size 128 \                                   # 推理batch size
+    --slide_ext .svs                                     # 切片文件扩展名，，用于过滤非 svs 文件
+python /home/cuiping/CLAM/create_patches_fp.py \
+    --source /data/cuiping/NSCLC/00_raw_wsi \
+    --save_dir /data/cuiping/NSCLC/patches_out \
+    --patch_size 256 \
+    --seg --patch --stitch \
+    --preset tcga.csv
+ features/
+    └── NSCLC_dataset/
+        ├── h5_files/*.h5
+        └── pt_files/*.pt
+
+#手动从hugging face下载模型后设置环境变量使得训练时使用下载模型
+CONCH: https://huggingface.co/MahmoodLab/CONCH
+海螺：https://huggingface.co/MahmoodLab/CONCH
+checkpoints
+├── conch
+│   ├── meta.yaml
+│   └── pytorch_model.bin
+└── uni
+    ├── config.json
+    └── pytorch_model.bin
+export CONCH_CKPT_PATH=checkpoints/conch/pytorch_model.bin
+export UNI_CKPT_PATH=checkpoints/uni/pytorch_model.bin
  
-``` shell
-python create_splits_seq.py --task task_1_tumor_vs_normal --seed 1 --k 10
-```
-The script uses the **Generic_WSI_Classification_Dataset** Class for which the constructor expects the same arguments as 
-**Generic_MIL_Dataset** (without the data_dir argument). For details, please refer to the dataset definition in **datasets/dataset_generic.py**
+#将文字标签转化为数字标签，即LUAD->0,LUSC->1
+import pandas as pd
+# 读取原始标签文件
+df = pd.read_csv('labels.csv')
+# NSCLC标签映射
+label_mapping = {'LUAD': 0, 'LUSC': 1}
+# 方法一：添加数字标签列（推荐）
+df['label_digital'] = df['label'].map(label_mapping)
+# 保存
+df.to_csv('labels_digital.csv', index=False)
+print("NSCLC标签映射：", label_mapping)
+print("数据预览：")
+print(df.head())
 
-### GPU Training Example for Binary Positive vs. Negative Classification (e.g. Lymph Node Status)
-Note: --embed_dim should be set to 512 for CONCH, and 1024 for UNI and resnet50_trunc.
+#Training Splits  训练拆分
+cd ~/CLAM
+python create_splits_seq.py \
+  --task task_2_tumor_subtyping \
+  --csv_path /data/cuiping/NSCLC/labels_digital.csv \
+  --output_dir ~/CLAM/splits \
+  --k 10 \
+  --seed 42 \
+  --val_frac 0.15 \
+  --test_frac 0.15
+  
+CLAM任务类型的区别：
+task_1_tumor_vs_normal
+用途：肿瘤组织 vs 正常组织的二分类
 
-``` shell
-CUDA_VISIBLE_DEVICES=0 python main.py --drop_out 0.25 --early_stopping --lr 2e-4 --k 10 --exp_code task_1_tumor_vs_normal_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task task_1_tumor_vs_normal --model_type clam_sb --log_data --data_root_dir DATA_ROOT_DIR --embed_dim 1024
-```
+示例：癌组织 vs 癌旁正常组织
 
-### GPU Training Example for Subtyping Problems (e.g. 3-class RCC Subtyping)
-``` shell
-CUDA_VISIBLE_DEVICES=0 python main.py --drop_out 0.25 --early_stopping --lr 2e-4 --k 10 --exp_code task_2_tumor_subtyping_CLAM_50 --weighted_sample --bag_loss ce --inst_loss svm --task task_2_tumor_subtyping --model_type clam_sb --log_data --subtyping --data_root_dir DATA_ROOT_DIR --embed_dim 1024
-``` 
-Note: We have included the option to use a single-attention-branch CLAM model, which performs favoribly in most experiments and can be set via --model_type clam_sb (single branch) or clam_mb (multi branch). clam_sb is the default choice. Additionally, the user can adjust the number of patches used for clustering via --B.
+特点：类别含义明确（肿瘤/正常），数据分布通常不平衡
 
-By default results will be saved to **results/exp_code** corresponding to the exp_code input argument from the user. If tensorboard logging is enabled (with the arugment toggle --log_data), the user can go into the results folder for the particular experiment, run:
-``` shell
-tensorboard --logdir=.
-```
-This should open a browser window and show the logged training/validation statistics in real time. 
-For information on each argument, see:
-``` shell
-python main.py -h
-```
+task_2_tumor_subtyping
+用途：肿瘤亚型之间的分类
 
-### Testing and Evaluation Script
-User also has the option of using the evluation script to test the performances of trained models. Examples corresponding to the models trained above are provided below:
-``` shell
-CUDA_VISIBLE_DEVICES=0 python eval.py --k 10 --models_exp_code task_1_tumor_vs_normal_CLAM_50_s1 --save_exp_code task_1_tumor_vs_normal_CLAM_50_s1_cv --task task_1_tumor_vs_normal --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR --embed_dim 1024
-```
+示例：LUAD vs LUSC、KIRC vs KIRP vs KICH
 
-``` shell
-CUDA_VISIBLE_DEVICES=0 python eval.py --k 10 --models_exp_code task_2_tumor_subtyping_CLAM_50_s1 --save_exp_code task_2_tumor_subtyping_CLAM_50_s1_cv --task task_2_tumor_subtyping --model_type clam_sb --results_dir results --data_root_dir DATA_ROOT_DIR --embed_dim 1024
-```
+特点：都是肿瘤组织，区分不同亚型
+  
+#训练 CLAM 模型
 
+#新版本的NumPy（2.0+）中 np.Inf 被移除了，需要使用 np.inf
+# 查找所有np.Inf的使用
+grep -r "np.Inf" /home/cuiping/CLAM/
+# 批量替换
+find /home/cuiping/CLAM -name "*.py" -exec sed -i 's/np\.Inf/np.inf/g' {} \;
 
-Once again, for information on each commandline argument, see:
-``` shell
-python eval.py -h
-```
+CUDA_VISIBLE_DEVICES=0 python ~/CLAM/main_for_NSCLC.py \
+  --drop_out 0.25 \
+  --early_stopping \
+  --lr 2e-4 \
+  --k 10 \
+  --split_dir ~/CLAM/splits/task_2_tumor_subtyping_100_for_NSCLC \
+  --exp_code NSCLC_subtyping_clam_sb \
+  --weighted_sample \
+  --bag_loss ce \
+  --inst_loss svm \
+  --task task_2_tumor_subtyping \
+  --model_type clam_sb \
+  --log_data \
+  --data_root_dir /data/cuiping/NSCLC/features \
+  --embed_dim 1024 \
+  --subtyping
 
-By adding your own custom datasets into **eval.py** the same way as you do for **main.py**, you can also easily test trained models on independent test sets. 
-
-### Heatmap Visualization
-Heatmap visualization can be computed in bulk via **create_heatmaps.py** by filling out the config file and storing it in **/heatmaps/configs** and then running **create_heatmaps.py** with the --config NAME_OF_CONFIG_FILE flag. A demo template is included (**config_template.yaml**) for lung subtyping on two WSIs from the CPTAC. 
-To run the demo (raw results are saved in **heatmaps/heatmap_raw_results** and final results are saved in **heatmaps/heatmap_production_results**):
-``` shell
+#模型评估
+CUDA_VISIBLE_DEVICES=0 python eval.py \
+    --k 10 \
+    --models_exp_code NSCLC_CLAM_s1 \
+    --save_exp_code NSCLC_CLAM_s1_cv \
+    --task task_1_tumor_vs_normal \
+    --model_type clam_sb \
+    --results_dir results \
+    --data_root_dir features \
+    --csv_path labels.csv \
+    --embed_dim 1024
+    
+#可视化
 CUDA_VISIBLE_DEVICES=0 python create_heatmaps.py --config config_template.yaml
 ```
-See **/heatmaps/configs/config_template.yaml** for explanations for each configurable option.
 
-Similar to feature extraction, if using UNI / CONCH, set the environment variables before running the script. See [Using CONCH / UNI as Pretrained Encoders](#using-conch--uni-as-pretrained-encoders) for more details.
-
-
-### Trained Model Checkpoints
-For reproducability, all trained models used can be accessed [here](https://drive.google.com/drive/folders/1NZ82z0U_cexP6zkx1mRk-QeJyKWk4Q7z?usp=sharing).
-The 3 main folders (**tcga_kidney_cv**, **tcga_cptac_lung_cv** and **camelyon_40x_cv**) correspond to models for RCC subtyping trained on the TCGA, for NSCLC subtyping trained on TCGA and CPTAC and for Lymph Node Metastasis (Breast) detection trained on Camelyon16+17 respectively. In each main folder, each subfolder corresponds to one set of 10-fold cross-validation experiments. For example, the subfolder tcga_kidney_cv_CLAM_50_s1 contains the 10 checkpoints corresponding to the 10 cross-validation folds for TCGA RCC subtyping, trained using CLAM with multi-attention branches using 50% of cases in the full training set. 
-
-For reproducability, these models can be evaluated on data prepared by following the same pipeline described in the sections above by calling **eval.py** with the appropriate arguments that specify the model options (either --model_type clam_mb or --model_type mil should be set, for evaluation only, --subtyping flag does not make a difference) as well as where the model checkpoints (--results_dir and --models_exp_code) and data (--data_root_dir and --task) are stored.
-
-### Examples
-
-Please refer to our pre-print and [interactive demo](http://clam.mahmoodlab.org) for detailed results on three different problems and adaptability across data sources, imaging devices and tissue content. 
-
-<img src="fig-git-hm.jpg" width="1000px" align="center" />  
-
-Visulize additional examples here: http://clam.mahmoodlab.org
-
-## Issues
-- Please report all issues on the public forum.
-
-## License
-© [Mahmood Lab](http://www.mahmoodlab.org) - This code is made available under the GPLv3 License and is available for non-commercial academic purposes.
-
-## Funding
-This work was funded by NIH NIGMS [R35GM138216](https://reporter.nih.gov/search/sWDcU5IfAUCabqoThQ26GQ/project-details/10029418).
-
-## Reference
-If you find our work useful in your research or if you use parts of this code please consider citing our [paper](https://www.nature.com/articles/s41551-020-00682-w):
-
-Lu, M.Y., Williamson, D.F.K., Chen, T.Y. et al. Data-efficient and weakly supervised computational pathology on whole-slide images. Nat Biomed Eng 5, 555–570 (2021). https://doi.org/10.1038/s41551-020-00682-w
-
-```
-@article{lu2021data,
-  title={Data-efficient and weakly supervised computational pathology on whole-slide images},
-  author={Lu, Ming Y and Williamson, Drew FK and Chen, Tiffany Y and Chen, Richard J and Barbieri, Matteo and Mahmood, Faisal},
-  journal={Nature Biomedical Engineering},
-  volume={5},
-  number={6},
-  pages={555--570},
-  year={2021},
-  publisher={Nature Publishing Group}
-}
-```
+### ✅CAMEYON

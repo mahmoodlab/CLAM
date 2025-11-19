@@ -1,8 +1,10 @@
 # internal imports
-from wsi_core.WholeSlideImage import WholeSlideImage
-from wsi_core.wsi_utils import StitchCoords
-from wsi_core.batch_process_utils import initialize_df
+# ========== 内置依赖 ==========
+from wsi_core.WholeSlideImage import WholeSlideImage  # 封装 OpenSlide 的 WSI 操作类
+from wsi_core.wsi_utils import StitchCoords  # 把 patch 结果画回全图的小工具
+from wsi_core.batch_process_utils import initialize_df   # 生成/初始化 csv 清单
 # other imports
+# ========== 通用库 ==========
 import os
 import numpy as np
 import time
@@ -11,6 +13,7 @@ import pdb
 import pandas as pd
 from tqdm import tqdm
 
+# ------------------ 1. 把 patch 结果“拼”成缩略热图 ------------------
 def stitching(file_path, wsi_object, downscale = 64):
 	start = time.time()
 	heatmap = StitchCoords(file_path, wsi_object, downscale=downscale, bg_color=(0,0,0), alpha=-1, draw_grid=False)
@@ -18,6 +21,7 @@ def stitching(file_path, wsi_object, downscale = 64):
 	
 	return heatmap, total_time
 
+# ------------------ 2. 组织前景分割（得到组织轮廓） ------------------
 def segment(WSI_object, seg_params = None, filter_params = None, mask_file = None):
 	### Start Seg Timer
 	start_time = time.time()
@@ -32,6 +36,7 @@ def segment(WSI_object, seg_params = None, filter_params = None, mask_file = Non
 	seg_time_elapsed = time.time() - start_time   
 	return WSI_object, seg_time_elapsed
 
+# ------------------ 3. 按轮廓切 patch ------------------
 def patching(WSI_object, **kwargs):
 	### Start Patch Timer
 	start_time = time.time()
@@ -44,7 +49,7 @@ def patching(WSI_object, **kwargs):
 	patch_time_elapsed = time.time() - start_time
 	return file_path, patch_time_elapsed
 
-
+# ------------------ 4. 主流程：分割 + 切 patch + 可选拼热图 ------------------
 def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_dir, 
 				  patch_size = 256, step_size = 256, 
 				  seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False,
@@ -58,8 +63,14 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 				  stitch= False, 
 				  patch = False, auto_skip=True, process_list = None):
 	
-
-
+	"""
+    source          : 放 WSI 的目录
+    save_dir        : 总输出目录
+    *save_dir        下会再分 patches/masks/stitches 三个子目录
+    seg/patch/stitch : bool，分别控制“只分割/只切图/只拼热图”
+    process_list    : 可选 csv，指定每张片子的专属参数
+    """
+	# --------------- 4.1 准备文件清单 ---------------
 	slides = sorted(os.listdir(source))
 	slides = [slide for slide in slides if os.path.isfile(os.path.join(source, slide))]
 	if process_list is None:
@@ -86,7 +97,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 	seg_times = 0.
 	patch_times = 0.
 	stitch_times = 0.
-
+	# --------------- 4.2 主循环 ---------------
 	for i in tqdm(range(total)):
 		df.to_csv(os.path.join(save_dir, 'process_list_autogen.csv'), index=False)
 		idx = process_stack.index[i]
@@ -102,10 +113,10 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 			df.loc[idx, 'status'] = 'already_exist'
 			continue
 
-		# Inialize WSI
+		# Inialize WSI # 载入 WSI
 		full_path = os.path.join(source, slide)
 		WSI_object = WholeSlideImage(full_path)
-
+		# --------------- 4.3 参数优先级：csv > default ---------------
 		if use_default_params:
 			current_vis_params = vis_params.copy()
 			current_filter_params = filter_params.copy()
@@ -175,10 +186,10 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 			current_seg_params['exclude_ids'] = []
 
 		w, h = WSI_object.level_dim[current_seg_params['seg_level']] 
-		if w * h > 1e8:
-			print('level_dim {} x {} is likely too large for successful segmentation, aborting'.format(w, h))
-			df.loc[idx, 'status'] = 'failed_seg'
-			continue
+		#if w * h > 5e8:#1e8
+		#	print('level_dim {} x {} is likely too large for successful segmentation, aborting'.format(w, h))
+		#	df.loc[idx, 'status'] = 'failed_seg'
+		#	continue
 
 		df.loc[idx, 'vis_level'] = current_vis_params['vis_level']
 		df.loc[idx, 'seg_level'] = current_seg_params['seg_level']
