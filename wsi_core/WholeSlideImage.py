@@ -93,7 +93,12 @@ class WholeSlideImage(object):
         """
             Segment the tissue via HSV -> Median thresholding -> Binary threshold
         """
-        
+
+        # Resolve negative seg_level before passing to OpenSlide
+        # OpenSlide's C library doesn't support Python's negative indexing
+        if seg_level<0:
+            seg_level = self.wsi.get_best_level_for_downsample(64)
+
         def _filter_contours(contours, hierarchy, filter_params):
             """
                 Filter contours by: area.
