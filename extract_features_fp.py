@@ -49,13 +49,13 @@ def compute_w_loader(output_path, loader, model, verbose = 0):
 
 
 parser = argparse.ArgumentParser(description='Feature Extraction')
-parser.add_argument('--data_h5_dir', type=str, default=None)
-parser.add_argument('--data_slide_dir', type=str, default=None)
+parser.add_argument('--data_h5_dir', type=str, default='/data/wsi/BRACS-process/patch-results')
+parser.add_argument('--data_slide_dir', type=str, default='/data/wsi/BRACS-process/wsi-soft-link')
 parser.add_argument('--slide_ext', type=str, default= '.svs')
-parser.add_argument('--csv_path', type=str, default=None)
-parser.add_argument('--feat_dir', type=str, default=None)
-parser.add_argument('--model_name', type=str, default='resnet50_trunc', choices=['resnet50_trunc', 'uni_v1', 'conch_v1'])
-parser.add_argument('--batch_size', type=int, default=256)
+parser.add_argument('--csv_path', type=str, default='/data/wsi/BRACS-process/labels/all.csv')
+parser.add_argument('--feat_dir', type=str, default='/data/wsi/BRACS-process/gigapath-features')
+parser.add_argument('--model_name', type=str, default='gigapath', choices=['resnet50_trunc', 'uni_v1', 'conch_v1'])
+parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--no_auto_skip', default=False, action='store_true')
 parser.add_argument('--target_patch_size', type=int, default=224)
 args = parser.parse_args()
@@ -83,7 +83,7 @@ if __name__ == '__main__':
 	loader_kwargs = {'num_workers': 8, 'pin_memory': True} if device.type == "cuda" else {}
 
 	for bag_candidate_idx in tqdm(range(total)):
-		slide_id = bags_dataset[bag_candidate_idx].split(args.slide_ext)[0]
+		slide_id = bags_dataset[bag_candidate_idx]
 		bag_name = slide_id+'.h5'
 		h5_file_path = os.path.join(args.data_h5_dir, 'patches', bag_name)
 		slide_file_path = os.path.join(args.data_slide_dir, slide_id+args.slide_ext)
