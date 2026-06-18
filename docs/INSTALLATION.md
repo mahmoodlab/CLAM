@@ -17,7 +17,7 @@ pip install git+https://github.com/Mahmoodlab/CONCH.git
 
 When done running experiments, to deactivate the environment:
 ```shell
-conda deactivate clam_latest
+conda deactivate
 ```
 Please report any issues in the public forum.
 
